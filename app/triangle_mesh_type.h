@@ -813,7 +813,7 @@ class MyTriMesh: public vcg::tri::TriMesh< std::vector<MyTriVertex>,
     std::set< CoordPair > FeaturesCoord;
 public:
 
-    ScalarType LimitConcave;
+    //ScalarType LimitConcave;
     std::vector<vcg::Box3<ScalarType> > FixedBox,BoundaryBox;
 
 private:
@@ -873,17 +873,17 @@ private:
         EdgePred(std::map<CoordPair,CoordType> *_SplitOps){SplitOps=_SplitOps;}
     };
 
-    void InitEdgeType()
-    {
-        for (size_t i=0;i<face.size();i++)
-            for (size_t j=0;j<3;j++)
-            {
-                if (IsConcaveEdge(face[i],j))
-                    face[i].FKind[j]=ETConcave;
-                else
-                    face[i].FKind[j]=ETConvex;
-            }
-    }
+//    void InitEdgeType()
+//    {
+//        for (size_t i=0;i<face.size();i++)
+//            for (size_t j=0;j<3;j++)
+//            {
+//                if (IsConcaveEdge(face[i],j))
+//                    face[i].FKind[j]=ETConcave;
+//                else
+//                    face[i].FKind[j]=ETConvex;
+//            }
+//    }
 
     void InitFeatureCoordsTable()
     {
@@ -960,176 +960,176 @@ private:
         return true;
     }
 
-    bool IsConcaveEdge(const FaceType &f0,int IndexE)
-    {
-        FaceType *f1=f0.cFFp(IndexE);
-        if (f1==&f0)return false;
-        CoordType N0=f0.cN();
-        CoordType N1=f1->cN();
-        CoordType EdgeDir=f0.cP1(IndexE)-f0.cP0(IndexE);
-        EdgeDir.Normalize();
-        CoordType Cross=N0^N1;
-        return ((Cross*EdgeDir)<LimitConcave);
-    }
+//    bool IsConcaveEdge(const FaceType &f0,int IndexE)
+//    {
+//        FaceType *f1=f0.cFFp(IndexE);
+//        if (f1==&f0)return false;
+//        CoordType N0=f0.cN();
+//        CoordType N1=f1->cN();
+//        CoordType EdgeDir=f0.cP1(IndexE)-f0.cP0(IndexE);
+//        EdgeDir.Normalize();
+//        CoordType Cross=N0^N1;
+//        return ((Cross*EdgeDir)<LimitConcave);
+//    }
 
 
-    bool SplitAdjacentTerminalVertices()
-    {
-        InitFeatureCoordsTable();
-        std::vector<size_t> PerVertConcaveEdge(vert.size(),0);
-        std::vector<size_t> PerVertConvexEdge(vert.size(),0);
-        //count concave vs convex
-        for (size_t i=0;i<face.size();i++)
-        {
-            for (size_t j=0;j<3;j++)
-            {
-                if (!face[i].IsFaceEdgeS(j))continue;
-                size_t IndexV0=vcg::tri::Index(*this,face[i].V0(j));
-                size_t IndexV1=vcg::tri::Index(*this,face[i].V1(j));
-                //only on one side
-                if (IndexV0>IndexV1)continue;
-                if (IsConcaveEdge(face[i],j))
-                {
-                    PerVertConcaveEdge[IndexV0]++;
-                    PerVertConcaveEdge[IndexV1]++;
-                }
-                else
-                {
-                    PerVertConvexEdge[IndexV0]++;
-                    PerVertConvexEdge[IndexV1]++;
-                }
-            }
-        }
+//    bool SplitAdjacentTerminalVertices()
+//    {
+//        InitFeatureCoordsTable();
+//        std::vector<size_t> PerVertConcaveEdge(vert.size(),0);
+//        std::vector<size_t> PerVertConvexEdge(vert.size(),0);
+//        //count concave vs convex
+//        for (size_t i=0;i<face.size();i++)
+//        {
+//            for (size_t j=0;j<3;j++)
+//            {
+//                if (!face[i].IsFaceEdgeS(j))continue;
+//                size_t IndexV0=vcg::tri::Index(*this,face[i].V0(j));
+//                size_t IndexV1=vcg::tri::Index(*this,face[i].V1(j));
+//                //only on one side
+//                if (IndexV0>IndexV1)continue;
+//                if (IsConcaveEdge(face[i],j))
+//                {
+//                    PerVertConcaveEdge[IndexV0]++;
+//                    PerVertConcaveEdge[IndexV1]++;
+//                }
+//                else
+//                {
+//                    PerVertConvexEdge[IndexV0]++;
+//                    PerVertConvexEdge[IndexV1]++;
+//                }
+//            }
+//        }
 
-        //count concave vs convex
-        std::map<CoordPair,CoordType> ToBeSplitted;
-        std::set<CoordPair> NewFeatureEdges;
-        for (size_t i=0;i<face.size();i++)
-        {
-            for (size_t j=0;j<3;j++)
-            {
-                if (!face[i].IsFaceEdgeS(j))continue;
-                size_t IndexV0=vcg::tri::Index(*this,face[i].V0(j));
-                size_t IndexV1=vcg::tri::Index(*this,face[i].V1(j));
-                size_t ConcaveEV0=PerVertConcaveEdge[IndexV0];
-                size_t ConcaveEV1=PerVertConcaveEdge[IndexV1];
-                size_t ConvexEV0=PerVertConvexEdge[IndexV0];
-                size_t ConvexEV1=PerVertConvexEdge[IndexV1];
-                size_t NumEV0=ConcaveEV0+ConvexEV0;
-                size_t NumEV1=ConcaveEV1+ConvexEV1;
-                bool IsCornerV0=false;
-                bool IsCornerV1=false;
+//        //count concave vs convex
+//        std::map<CoordPair,CoordType> ToBeSplitted;
+//        std::set<CoordPair> NewFeatureEdges;
+//        for (size_t i=0;i<face.size();i++)
+//        {
+//            for (size_t j=0;j<3;j++)
+//            {
+//                if (!face[i].IsFaceEdgeS(j))continue;
+//                size_t IndexV0=vcg::tri::Index(*this,face[i].V0(j));
+//                size_t IndexV1=vcg::tri::Index(*this,face[i].V1(j));
+//                size_t ConcaveEV0=PerVertConcaveEdge[IndexV0];
+//                size_t ConcaveEV1=PerVertConcaveEdge[IndexV1];
+//                size_t ConvexEV0=PerVertConvexEdge[IndexV0];
+//                size_t ConvexEV1=PerVertConvexEdge[IndexV1];
+//                size_t NumEV0=ConcaveEV0+ConvexEV0;
+//                size_t NumEV1=ConcaveEV1+ConvexEV1;
+//                bool IsCornerV0=false;
+//                bool IsCornerV1=false;
 
-                if (NumEV0==1)IsCornerV0=true;
-                if (NumEV0>2)IsCornerV0=true;
-                if ((ConcaveEV0>0)&&(ConvexEV0>0))IsCornerV0=true;
+//                if (NumEV0==1)IsCornerV0=true;
+//                if (NumEV0>2)IsCornerV0=true;
+//                if ((ConcaveEV0>0)&&(ConvexEV0>0))IsCornerV0=true;
 
-                if (NumEV1==1)IsCornerV1=true;
-                if (NumEV1>2)IsCornerV1=true;
-                if ((ConcaveEV1>0)&&(ConvexEV1>0))IsCornerV1=true;
+//                if (NumEV1==1)IsCornerV1=true;
+//                if (NumEV1>2)IsCornerV1=true;
+//                if ((ConcaveEV1>0)&&(ConvexEV1>0))IsCornerV1=true;
 
-                //                std::cout<<"ConcaveEV0 "<<ConcaveEV0<<std::endl;
-                //                std::cout<<"ConcaveEV1 "<<ConcaveEV1<<std::endl;
-                //                std::cout<<"ConvexEV0 "<<ConvexEV0<<std::endl;
-                //                std::cout<<"ConvexEV1 "<<ConvexEV1<<std::endl;
-                if (IsCornerV0 && IsCornerV1)
-                {
-                    CoordType P0=face[i].P0(j);
-                    CoordType P1=face[i].P1(j);
-                    CoordPair Key(std::min(P0,P1),std::max(P0,P1));
-                    CoordType Mid=(P0+P1)/2;
-                    ToBeSplitted[Key]=Mid;
-                    CoordPair newEdge0(std::min(P0,Mid),std::max(P0,Mid));
-                    CoordPair newEdge1(std::min(P1,Mid),std::max(P1,Mid));
-                    NewFeatureEdges.insert(newEdge0);
-                    NewFeatureEdges.insert(newEdge1);
-                }
-            }
-        }
+//                //                std::cout<<"ConcaveEV0 "<<ConcaveEV0<<std::endl;
+//                //                std::cout<<"ConcaveEV1 "<<ConcaveEV1<<std::endl;
+//                //                std::cout<<"ConvexEV0 "<<ConvexEV0<<std::endl;
+//                //                std::cout<<"ConvexEV1 "<<ConvexEV1<<std::endl;
+//                if (IsCornerV0 && IsCornerV1)
+//                {
+//                    CoordType P0=face[i].P0(j);
+//                    CoordType P1=face[i].P1(j);
+//                    CoordPair Key(std::min(P0,P1),std::max(P0,P1));
+//                    CoordType Mid=(P0+P1)/2;
+//                    ToBeSplitted[Key]=Mid;
+//                    CoordPair newEdge0(std::min(P0,Mid),std::max(P0,Mid));
+//                    CoordPair newEdge1(std::min(P1,Mid),std::max(P1,Mid));
+//                    NewFeatureEdges.insert(newEdge0);
+//                    NewFeatureEdges.insert(newEdge1);
+//                }
+//            }
+//        }
 
 
-        std::cout<<"Performing "<<ToBeSplitted.size()<< " split ops"<<std::endl;
-        if (ToBeSplitted.size()==0)return false;
+//        std::cout<<"Performing "<<ToBeSplitted.size()<< " split ops"<<std::endl;
+//        if (ToBeSplitted.size()==0)return false;
 
-        SplitLev splMd(&ToBeSplitted);
-        EdgePred eP(&ToBeSplitted);
+//        SplitLev splMd(&ToBeSplitted);
+//        EdgePred eP(&ToBeSplitted);
 
-        //do the final split
-        bool done=vcg::tri::RefineE<MeshType,SplitLev,EdgePred>(*this,splMd,eP);
+//        //do the final split
+//        bool done=vcg::tri::RefineE<MeshType,SplitLev,EdgePred>(*this,splMd,eP);
 
-        //set old features
-        SetFeatureFromTable();
+//        //set old features
+//        SetFeatureFromTable();
 
-        //and the new ones
-        for (size_t i=0;i<face.size();i++)
-        {
-            for (size_t j=0;j<3;j++)
-            {
-                CoordType P0=face[i].P0(j);
-                CoordType P1=face[i].P1(j);
-                CoordPair Key(std::min(P0,P1),std::max(P0,P1));
-                if (NewFeatureEdges.count(Key)==0)continue;
-                face[i].SetFaceEdgeS(j);
-            }
-        }
-        return done;
-    }
+//        //and the new ones
+//        for (size_t i=0;i<face.size();i++)
+//        {
+//            for (size_t j=0;j<3;j++)
+//            {
+//                CoordType P0=face[i].P0(j);
+//                CoordType P1=face[i].P1(j);
+//                CoordPair Key(std::min(P0,P1),std::max(P0,P1));
+//                if (NewFeatureEdges.count(Key)==0)continue;
+//                face[i].SetFaceEdgeS(j);
+//            }
+//        }
+//        return done;
+//    }
 
-    bool SplitAdjacentEdgeSharpFromEdgeSel()
-    {
-        InitFeatureCoordsTable();
-        vcg::tri::UpdateSelection<MeshType>::VertexClear(*this);
-        //InitFaceEdgeSelFromFeatureSeq();
+//    bool SplitAdjacentEdgeSharpFromEdgeSel()
+//    {
+//        InitFeatureCoordsTable();
+//        vcg::tri::UpdateSelection<MeshType>::VertexClear(*this);
+//        //InitFaceEdgeSelFromFeatureSeq();
 
-        std::set<std::pair<CoordType,CoordType> > EdgePos;
+//        std::set<std::pair<CoordType,CoordType> > EdgePos;
 
-        for (size_t i=0;i<face.size();i++)
-        {
-            for (size_t j=0;j<3;j++)
-            {
-                if (!face[i].IsFaceEdgeS(j))continue;
-                int VIndex0=vcg::tri::Index(*this,face[i].V0(j));
-                int VIndex1=vcg::tri::Index(*this,face[i].V1(j));
-                CoordType P0=vert[VIndex0].P();
-                CoordType P1=vert[VIndex1].P();
-                vert[VIndex0].SetS();
-                vert[VIndex1].SetS();
-                EdgePos.insert(std::pair<CoordType,CoordType>(std::min(P0,P1),std::max(P0,P1)));
-            }
-        }
+//        for (size_t i=0;i<face.size();i++)
+//        {
+//            for (size_t j=0;j<3;j++)
+//            {
+//                if (!face[i].IsFaceEdgeS(j))continue;
+//                int VIndex0=vcg::tri::Index(*this,face[i].V0(j));
+//                int VIndex1=vcg::tri::Index(*this,face[i].V1(j));
+//                CoordType P0=vert[VIndex0].P();
+//                CoordType P1=vert[VIndex1].P();
+//                vert[VIndex0].SetS();
+//                vert[VIndex1].SetS();
+//                EdgePos.insert(std::pair<CoordType,CoordType>(std::min(P0,P1),std::max(P0,P1)));
+//            }
+//        }
 
-        //then save the edges to be splitted
-        std::map<CoordPair,CoordType> ToBeSplitted;
-        for (size_t i=0;i<face.size();i++)
-        {
-            //find the number of edges
-            int Num=0;
-            for (size_t j=0;j<3;j++)
-            {
-                int VIndex0=vcg::tri::Index(*this,face[i].V0(j));
-                int VIndex1=vcg::tri::Index(*this,face[i].V1(j));
-                if ((!vert[VIndex0].IsS())||(!vert[VIndex1].IsS()))continue;
-                CoordType P0=vert[VIndex0].P();
-                CoordType P1=vert[VIndex1].P();
-                std::pair<CoordType,CoordType> Key(std::min(P0,P1),std::max(P0,P1));
-                if (EdgePos.count(Key)==1){Num++;continue;}
+//        //then save the edges to be splitted
+//        std::map<CoordPair,CoordType> ToBeSplitted;
+//        for (size_t i=0;i<face.size();i++)
+//        {
+//            //find the number of edges
+//            int Num=0;
+//            for (size_t j=0;j<3;j++)
+//            {
+//                int VIndex0=vcg::tri::Index(*this,face[i].V0(j));
+//                int VIndex1=vcg::tri::Index(*this,face[i].V1(j));
+//                if ((!vert[VIndex0].IsS())||(!vert[VIndex1].IsS()))continue;
+//                CoordType P0=vert[VIndex0].P();
+//                CoordType P1=vert[VIndex1].P();
+//                std::pair<CoordType,CoordType> Key(std::min(P0,P1),std::max(P0,P1));
+//                if (EdgePos.count(Key)==1){Num++;continue;}
 
-                ToBeSplitted[Key]=(P0+P1)/2;
-            }
-            assert(Num<=2);//this should be already solved
-        }
-        std::cout<<"Performing "<<ToBeSplitted.size()<< " split ops"<<std::endl;
+//                ToBeSplitted[Key]=(P0+P1)/2;
+//            }
+//            assert(Num<=2);//this should be already solved
+//        }
+//        std::cout<<"Performing "<<ToBeSplitted.size()<< " split ops"<<std::endl;
 
-        SplitLev splMd(&ToBeSplitted);
-        EdgePred eP(&ToBeSplitted);
+//        SplitLev splMd(&ToBeSplitted);
+//        EdgePred eP(&ToBeSplitted);
 
-        //do the final split
-        bool done=vcg::tri::RefineE<MeshType,SplitLev,EdgePred>(*this,splMd,eP);
+//        //do the final split
+//        bool done=vcg::tri::RefineE<MeshType,SplitLev,EdgePred>(*this,splMd,eP);
 
-        UpdateDataStructures();
-        SetFeatureFromTable();
-        return done;
-    }
+//        UpdateDataStructures();
+//        SetFeatureFromTable();
+//        return done;
+//    }
 
     typedef vcg::tri::FieldSmoother<MyTriMesh> FieldSmootherType;
 
@@ -1173,19 +1173,19 @@ public:
         SetFeatureFromTable();
     }
 
-    void RefineIfNeeded()
-    {
-        bool has_refined=false;
-        do
-        {
-            has_refined=false;
-            has_refined|=RefineInternalFacesStepFromEdgeSel();
-            has_refined|=SplitAdjacentEdgeSharpFromEdgeSel();
-            //has_refined|=SplitAdjacentTerminalVertices();
-            //has_refined|=SplitEdgeSharpSharingVerticesFromEdgeSel();
-        }while (has_refined);
-        InitEdgeType();
-    }
+//    void RefineIfNeeded()
+//    {
+//        bool has_refined=false;
+//        do
+//        {
+//            has_refined=false;
+//            has_refined|=RefineInternalFacesStepFromEdgeSel();
+//            has_refined|=SplitAdjacentEdgeSharpFromEdgeSel();
+//            //has_refined|=SplitAdjacentTerminalVertices();
+//            //has_refined|=SplitEdgeSharpSharingVerticesFromEdgeSel();
+//        }while (has_refined);
+//        InitEdgeType();
+//    }
 
     void InitBound()
     {
@@ -1706,7 +1706,7 @@ public:
     void InitSharpFeatures(ScalarType SharpAngleDegree)
     {
         vcg::tri::UpdateFlags<MeshType>::FaceEdgeSelCrease(*this,vcg::math::ToRad(SharpAngleDegree));
-        InitEdgeType();
+        //InitEdgeType();
         for (size_t i=0;i<face.size();i++)
             for (size_t j=0;j<3;j++)
             {

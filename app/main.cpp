@@ -62,7 +62,9 @@ extern bool do_batch;
 extern bool snapBorder;
 extern bool alignFieldBorder;
 extern typename MyTriMesh::ScalarType miqAnisotropy;
-
+extern typename MyTriMesh::ScalarType SmoothGamma;
+extern MyTriMesh::ScalarType smallVal
+;
 bool CheckExist(const std::string &path)
 {
     QString pathQ=QString(path.c_str());
@@ -93,6 +95,96 @@ bool isNumber(const std::string &str)
     return (ret != 0);
 }
 
+void ParseArgument(const std::string &str)
+{
+    if (str.compare(std::string("alignb"))==0)
+    {
+        alignFieldBorder=true;
+        std::cout<<"**** ALIGN BORDERS **** "<<std::endl;
+        return;
+    }
+    if (str.compare(std::string("snap"))==0)
+    {
+        snapBorder=true;
+        std::cout<<"**** SNAP BORDERS **** "<<std::endl;
+        return;
+    }
+    if (str.compare(std::string("batch"))==0)
+    {
+        do_batch=true;
+        std::cout<<"**** BATCH COMPUTATION **** "<<std::endl;
+        return;
+    }
+
+    size_t indexExt=str.find("-G");
+    if (indexExt!=string::npos)
+    {
+        std::string valGrad=str.substr(2,str.size());
+        DefaultGradient=atoi(valGrad.c_str());
+        std::cout<<"Gradient Value: "<<DefaultGradient<<std::endl;
+        return;
+    }
+
+    indexExt=str.find("-A");
+    if (indexExt!=string::npos)
+    {
+        std::string valAni=str.substr(2,str.size());
+        miqAnisotropy=atof(valAni.c_str());
+        std::cout<<"Anisotropy Value: "<<miqAnisotropy<<std::endl;
+        return;
+    }
+
+    indexExt=str.find("-S");
+    if (indexExt!=string::npos)
+    {
+        std::string valSm=str.substr(2,str.size());
+        SmoothGamma=atof(valSm.c_str());
+        std::cout<<"Smooth Gamma Value: "<<SmoothGamma<<std::endl;
+        return;
+    }
+
+    indexExt=str.find("-C");
+    if (indexExt!=string::npos)
+    {
+        std::string valSm=str.substr(2,str.size());
+        smallVal=atof(valSm.c_str());
+        std::cout<<"Small collapse: "<<smallVal<<std::endl;
+        return;
+    }
+
+    std::string ext=GetExtension(str);
+    if (((ext.compare(std::string("ply"))==0)||
+         (ext.compare(std::string("obj"))==0)||
+         (ext.compare(std::string("off"))==0)))
+    {
+        pathM=str;
+        std::cout<<"Mesh Filename:"<<pathM.c_str()<<std::endl;
+        bool existM=CheckExist(pathM);
+        if (!existM)
+        {
+            std::cout<<"Wrong Mesh Filename"<<std::endl;
+            exit(0);
+        }
+        return;
+    }
+
+    if ((ext.compare(std::string("ffield"))==0)||
+        (ext.compare(std::string("rosy"))==0)||
+        (ext.compare(std::string("blk"))==0))
+    {
+        pathF=std::string(str);
+        std::cout<<"Field Filename:"<<pathF.c_str()<<std::endl;
+        bool existF=CheckExist(pathF);
+        if (!existF)
+        {
+            std::cout<<"Wrong Field Filename"<<std::endl;
+            exit(0);
+        }
+        return;
+    }
+
+}
+
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
@@ -114,106 +206,114 @@ int main(int argc, char *argv[])
     }
 
     assert(argc>1);
-    pathM=std::string(argv[1]);
-    bool existM=CheckExist(pathM);
-    if (!existM)
-    {
-        std::cout<<"Wrong Mesh Filename"<<std::endl;
-        exit(0);
-    }
+//    pathM=std::string(argv[1]);
+//    bool existM=CheckExist(pathM);
+//    if (!existM)
+//    {
+//        std::cout<<"Wrong Mesh Filename"<<std::endl;
+//        exit(0);
+//    }
 
-    std::string ext=GetExtension(pathM);
-    std::cout<<"Lading Mesh Extension:"<<ext.c_str()<<std::endl;
-    if (!((ext.compare(std::string("ply"))==0)||
-          (ext.compare(std::string("obj"))==0)||
-          (ext.compare(std::string("off"))==0)))
-    {
-        std::cout<<"Wrong Mesh Extension"<<std::endl;
-        exit(0);
-    }
+//    std::string ext=GetExtension(pathM);
+//    std::cout<<"Lading Mesh Extension:"<<ext.c_str()<<std::endl;
+//    if (!((ext.compare(std::string("ply"))==0)||
+//          (ext.compare(std::string("obj"))==0)||
+//          (ext.compare(std::string("off"))==0)))
+//    {
+//        std::cout<<"Wrong Mesh Extension"<<std::endl;
+//        exit(0);
+//    }
 
-    if (argc>2)
-    {
-        std::cout<<"**Checking Parameters**"<<std::endl;
-        for (size_t i=2;i<argc;i++)
-        {
-            std::cout<<"Checking Parameter "<<argv[i]<<std::endl;
-            //in this case is a gradient of the tessellation
-            if (isNumber(argv[i]))
-            {
-                float testN=atof(argv[i]);
-                assert(testN>0);
-                if (testN>1)
-                {
-                    DefaultGradient=atoi( argv[i] );
-                    std::cout<<"Gradient Value: "<<DefaultGradient<<std::endl;
-                }
-                else
-                {
-                    miqAnisotropy=(MyTriMesh::ScalarType)testN;
-                    std::cout<<"Anisotropy Value: "<<miqAnisotropy<<std::endl;
-                }
-            }
-            else{
-                if (std::string(argv[i]).compare(std::string("alignb"))==0)
-                {
-                    alignFieldBorder=true;
-                    std::cout<<"**** ALIGN BORDERS **** "<<std::endl;
-                }
-                else
-                {
-                    if (std::string(argv[i]).compare(std::string("snap"))==0)
-                    {
-                        snapBorder=true;
-                        std::cout<<"**** SNAP BORDERS **** "<<std::endl;
-                    }
-                    else
-                    {
-                        if (std::string(argv[i]).compare(std::string("batch"))==0)
-                        {
-                            do_batch=true;
-                            std::cout<<"**** BATCH COMPUTATION **** "<<std::endl;
-                        }
-                        else
-                        {
-                            std::string ext=GetExtension(argv[i]);
-                            if ((ext.compare(std::string("ffield"))==0)||
-                                    (ext.compare(std::string("rosy"))==0)||
-                                    (ext.compare(std::string("blk"))==0))
-                            {
-                                pathF=std::string(argv[i]);
-                                std::cout<<"Field Filename:"<<pathF.c_str()<<std::endl;
-                                bool existF=CheckExist(pathF);
-                                if (!existF)
-                                {
-                                    std::cout<<"Wrong Field Filename"<<std::endl;
-                                    exit(0);
-                                }
-                            }
-                            else
-                                if (ext.compare(std::string("box"))==0)
-                                {
-                                    pathL=std::string(argv[i]);
-                                    std::cout<<"Load Filename:"<<pathF.c_str()<<std::endl;
-                                    bool existL=CheckExist(pathL);
-                                    if (!existL)
-                                    {
-                                        std::cout<<"Wrong Load Filename"<<std::endl;
-                                        exit(0);
-                                    }
-                                }
-                                else
-                                {
-                                    std::cout<<"Wrong Parameter"<<std::endl;
-                                    exit(0);
-                                }
-                        }
-                    }
-                }
-            }
-        }
-    }
+//    if (argc>2)
+//    {
+//        std::cout<<"**Checking Parameters**"<<std::endl;
+//        for (size_t i=2;i<argc;i++)
+//        {
+//            std::cout<<"Checking Parameter "<<argv[i]<<std::endl;
+//            //in this case is a gradient of the tessellation
+//            if (isNumber(argv[i]))
+//            {
+//                float testN=atof(argv[i]);
+//                assert(testN>0);
+//                if (testN>1)
+//                {
+//                    DefaultGradient=atoi( argv[i] );
+//                    std::cout<<"Gradient Value: "<<DefaultGradient<<std::endl;
+//                }
+//                else
+//                {
+//                    miqAnisotropy=(MyTriMesh::ScalarType)testN;
+//                    std::cout<<"Anisotropy Value: "<<miqAnisotropy<<std::endl;
+//                }
+//            }
+//            else{
+//                if (std::string(argv[i]).compare(std::string("alignb"))==0)
+//                {
+//                    alignFieldBorder=true;
+//                    std::cout<<"**** ALIGN BORDERS **** "<<std::endl;
+//                }
+//                else
+//                {
+//                    if (std::string(argv[i]).compare(std::string("snap"))==0)
+//                    {
+//                        snapBorder=true;
+//                        std::cout<<"**** SNAP BORDERS **** "<<std::endl;
+//                    }
+//                    else
+//                    {
+//                        if (std::string(argv[i]).compare(std::string("batch"))==0)
+//                        {
+//                            do_batch=true;
+//                            std::cout<<"**** BATCH COMPUTATION **** "<<std::endl;
+//                        }
+//                        else
+//                        {
+//                            std::string ext=GetExtension(argv[i]);
+//                            if ((ext.compare(std::string("ffield"))==0)||
+//                                    (ext.compare(std::string("rosy"))==0)||
+//                                    (ext.compare(std::string("blk"))==0))
+//                            {
+//                                pathF=std::string(argv[i]);
+//                                std::cout<<"Field Filename:"<<pathF.c_str()<<std::endl;
+//                                bool existF=CheckExist(pathF);
+//                                if (!existF)
+//                                {
+//                                    std::cout<<"Wrong Field Filename"<<std::endl;
+//                                    exit(0);
+//                                }
+//                            }
+//                            else
+////                                if (ext.compare(std::string("box"))==0)
+////                                {
+////                                    pathL=std::string(argv[i]);
+////                                    std::cout<<"Load Filename:"<<pathF.c_str()<<std::endl;
+////                                    bool existL=CheckExist(pathL);
+////                                    if (!existL)
+////                                    {
+////                                        std::cout<<"Wrong Load Filename"<<std::endl;
+////                                        exit(0);
+////                                    }
+////                                }
+////                                else
+//                                {
+//                                    std::cout<<"Wrong Parameter"<<std::endl;
+//                                    exit(0);
+//                                }
+//                        }
+//                    }
+//                }
+//            }
+//        }
+//    }
 
+    for (size_t i=0;i<argc;i++)
+        ParseArgument(argv[i]);
+
+    if (pathM == std::string(""))
+    {
+       std::cout<<"You should pass a Mesh"<<std::endl;
+       exit(0);
+    }
     GLWidget window;
 
     window.show();

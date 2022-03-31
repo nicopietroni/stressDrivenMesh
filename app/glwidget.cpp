@@ -56,7 +56,7 @@
 #include <wrap/gl/trimesh.h>
 //#include <vcg/complex/algorithms/parametrization/tangent_field_operators.h>
 #include <wrap/gl/gl_field.h>
-#include <AutoRemesher.h>
+//#include <AutoRemesher.h>
 #include <wrap/igl/miq_parametrization.h>
 #include <vcg/complex/algorithms/quadrangulator.h>
 #include <vcg/complex/algorithms/dual_meshing.h>
@@ -95,8 +95,8 @@ typedef typename MyTriMesh::CoordType CoordType;
 //ScalarType EdgeStep;
 //ScalarType Multiplier=2;
 
-ScalarType SharpDegree=45;
-ScalarType CornerDegree=45;
+//ScalarType SharpDegree=45;
+//ScalarType CornerDegree=45;
 
 ScalarType MinFieldVal=0;
 ScalarType MaxFieldVal=0;
@@ -114,7 +114,7 @@ QuadRefiner<PMesh> QRef(quad_mesh);
 typedef vcg::tri::FieldSmoother<MyTriMesh> FieldSmootherType;
 FieldSmootherType::SmoothParam FieldParam;
 
-AutoRemesher<MyTriMesh>::Params RemPar;
+//AutoRemesher<MyTriMesh>::Params RemPar;
 vcg::tri::MiQParametrizer<MyTriMesh>::MIQParameters MiqP;
 
 bool quadrangulated=false;
@@ -124,6 +124,8 @@ double SmoothGamma=0.1;
 bool do_batch=false;
 bool draw_seq=false;
 ScalarType miqAnisotropy=0.2;
+
+std::set<std::pair<size_t,size_t> > SelEdges;
 
 void DoCollapseSmall()
 {
@@ -211,75 +213,75 @@ void TW_CALL MiqQuadrangulate(void *)
     DoMiqQuadrangulate();
 }
 
-void TW_CALL SplitQuad(void *)
-{
-    quad_mesh.SplitToQuad();
-    quad_mesh.UpdateAttributes();
-    quad_mesh.SetFixedConstrainedVertFromBoxes(tri_mesh.FixedBox,tri_mesh.BoundaryBox);
-}
+//void TW_CALL SplitQuad(void *)
+//{
+//    quad_mesh.SplitToQuad();
+//    quad_mesh.UpdateAttributes();
+//    quad_mesh.SetFixedConstrainedVertFromBoxes(tri_mesh.FixedBox,tri_mesh.BoundaryBox);
+//}
 
-void TW_CALL AutoRemesh(void *)
-{
-    int remesher_iterations=15;
-    ScalarType remesher_aspect_ratio=0.3;
-    int remesher_termination_delta=10000;
+//void TW_CALL AutoRemesh(void *)
+//{
+//    int remesher_iterations=15;
+//    ScalarType remesher_aspect_ratio=0.3;
+//    int remesher_termination_delta=10000;
 
-    //    ScalarType sharp_feature_thr=35;
-    //    int feature_erode_dilate=4;
+//    //    ScalarType sharp_feature_thr=35;
+//    //    int feature_erode_dilate=4;
 
-    tri_mesh.UpdateDataStructures();
-    AutoRemesher<MyTriMesh>::Params RemPar;
-    RemPar.iterations   = remesher_iterations;
-    RemPar.targetAspect = remesher_aspect_ratio;
-    RemPar.targetDeltaFN= remesher_termination_delta;
-    RemPar.userSelectedCreases = true;
-    RemPar.surfDistCheck = true;
+//    tri_mesh.UpdateDataStructures();
+//    AutoRemesher<MyTriMesh>::Params RemPar;
+//    RemPar.iterations   = remesher_iterations;
+//    RemPar.targetAspect = remesher_aspect_ratio;
+//    RemPar.targetDeltaFN= remesher_termination_delta;
+//    RemPar.userSelectedCreases = true;
+//    RemPar.surfDistCheck = true;
 
-    std::shared_ptr<MyTriMesh> clean = AutoRemesher<MyTriMesh>::CleanMesh(tri_mesh,true);
+//    std::shared_ptr<MyTriMesh> clean = AutoRemesher<MyTriMesh>::CleanMesh(tri_mesh,true);
 
-    std::shared_ptr<MyTriMesh> ret=AutoRemesher<MyTriMesh>::Remesh(*clean,RemPar);
-    tri_mesh.Clear();
-    vcg::tri::Append<MyTriMesh,MyTriMesh>::Mesh(tri_mesh,(*ret));
-    vcg::tri::Clean<MyTriMesh>::RemoveUnreferencedVertex(tri_mesh);
-    vcg::tri::Allocator<MyTriMesh>::CompactEveryVector(tri_mesh);
-    tri_mesh.UpdateDataStructures();
-    //    tri_mesh.UpdateDataStructures();
-    //    vcg::tri::IsotropicRemeshing<MyTriMesh>::Params par;
-    //    par.minLength=tri_mesh.bbox.Diag()*0.005;
-    //    par.maxLength=tri_mesh.bbox.Diag()*0.01;
-    //    vcg::tri::IsotropicRemeshing<MyTriMesh>::Do(tri_mesh,par);
-    //std::shared_ptr<MyTriMesh> ret=AutoRemesher<MyTriMesh>::Remesh(tri_mesh,RemPar);
-    //tri_mesh.Clear();
-    //vcg::tri::Append<MyTriMesh,MyTriMesh>::Mesh(tri_mesh,(*ret));
-    tri_mesh.UpdateDataStructures();
-}
+//    std::shared_ptr<MyTriMesh> ret=AutoRemesher<MyTriMesh>::Remesh(*clean,RemPar);
+//    tri_mesh.Clear();
+//    vcg::tri::Append<MyTriMesh,MyTriMesh>::Mesh(tri_mesh,(*ret));
+//    vcg::tri::Clean<MyTriMesh>::RemoveUnreferencedVertex(tri_mesh);
+//    vcg::tri::Allocator<MyTriMesh>::CompactEveryVector(tri_mesh);
+//    tri_mesh.UpdateDataStructures();
+//    //    tri_mesh.UpdateDataStructures();
+//    //    vcg::tri::IsotropicRemeshing<MyTriMesh>::Params par;
+//    //    par.minLength=tri_mesh.bbox.Diag()*0.005;
+//    //    par.maxLength=tri_mesh.bbox.Diag()*0.01;
+//    //    vcg::tri::IsotropicRemeshing<MyTriMesh>::Do(tri_mesh,par);
+//    //std::shared_ptr<MyTriMesh> ret=AutoRemesher<MyTriMesh>::Remesh(tri_mesh,RemPar);
+//    //tri_mesh.Clear();
+//    //vcg::tri::Append<MyTriMesh,MyTriMesh>::Mesh(tri_mesh,(*ret));
+//    tri_mesh.UpdateDataStructures();
+//}
 
-void TW_CALL InitSharpFeatures(void *)
-{
-    //tri_mesh.Clear();
-    //vcg::tri::Append<MyTriMesh,MyTriMesh>::Mesh(tri_mesh,remeshed_mesh);
-    tri_mesh.UpdateDataStructures();
-    tri_mesh.InitSharpFeatures(SharpDegree);
-}
+//void TW_CALL InitSharpFeatures(void *)
+//{
+//    //tri_mesh.Clear();
+//    //vcg::tri::Append<MyTriMesh,MyTriMesh>::Mesh(tri_mesh,remeshed_mesh);
+//    tri_mesh.UpdateDataStructures();
+//    tri_mesh.InitSharpFeatures(SharpDegree);
+//}
 
-void TW_CALL RefineIfNeeded(void *)
-{
-    tri_mesh.RefineIfNeeded();
-    Gr.Set(tri_mesh.face.begin(),tri_mesh.face.end());
-}
+//void TW_CALL RefineIfNeeded(void *)
+//{
+//    tri_mesh.RefineIfNeeded();
+//    Gr.Set(tri_mesh.face.begin(),tri_mesh.face.end());
+//}
 
 
-void TW_CALL SelectCorners(void *)
-{
-    vcg::tri::UpdateSelection<MyTriMesh>::VertexCornerBorder(tri_mesh,fabs(180-CornerDegree) * M_PI/180);
-    vcg::tri::UpdateColor<MyTriMesh>::PerVertexConstant(tri_mesh);
-    for (size_t i=0;i<tri_mesh.vert.size();i++)
-    {
-        if (!tri_mesh.vert[i].IsS())continue;
-        tri_mesh.vert[i].C()=vcg::Color4b::Red;
-    }
-    //Gr.Set(tri_mesh.face.begin(),tri_mesh.face.end());
-}
+//void TW_CALL SelectCorners(void *)
+//{
+//    vcg::tri::UpdateSelection<MyTriMesh>::VertexCornerBorder(tri_mesh,fabs(180-CornerDegree) * M_PI/180);
+//    vcg::tri::UpdateColor<MyTriMesh>::PerVertexConstant(tri_mesh);
+//    for (size_t i=0;i<tri_mesh.vert.size();i++)
+//    {
+//        if (!tri_mesh.vert[i].IsS())continue;
+//        tri_mesh.vert[i].C()=vcg::Color4b::Red;
+//    }
+//    //Gr.Set(tri_mesh.face.begin(),tri_mesh.face.end());
+//}
 
 void TW_CALL SmoothCurvatureField(void *)
 {
@@ -427,9 +429,21 @@ void TW_CALL SaveAbaqus(void *)
     quad_mesh.ExportToAbaqus(inpName);
 }
 
-void TW_CALL SaveQuad(void *)
+void SaveAll()
 {
+    //save field
+    DoSaveFieldData();
+    //save quad
     DoSaveQuad();
+    //save setup
+    DoSaveSetup();
+    //close the execution
+}
+
+void TW_CALL SaveAllData(void *)
+{
+    SaveAll();
+    //DoSaveQuad();
 }
 
 void TW_CALL SaveSingularities(void *)
@@ -462,15 +476,15 @@ void TW_CALL SaveSingularities(void *)
 void SetFieldBarSizePosition(QWidget *w)
 {
     int params[2];
-    params[0] = QTDeviceWidth(w) / 2;
-    params[1] = QTDeviceHeight(w) / 0.5;
+    params[0] = QTDeviceWidth(w) / 3;
+    params[1] = QTDeviceHeight(w) / 1.5;
     TwSetParam(barQuad, NULL, "size", TW_PARAM_INT32, 2, params);
     params[0] = QTLogicalToDevice(w, 10);
     params[1] = 30;//QTDeviceHeight(w) - params[1] - QTLogicalToDevice(w, 10);
     TwSetParam(barQuad, NULL, "position", TW_PARAM_INT32, 2, params);
 }
 
-void BatchComputation()
+void DoBatchComputation()
 {
     if (drawfield)
     {
@@ -502,14 +516,19 @@ void BatchComputation()
     DoMiqQuadrangulate();
     if (smallVal>0)
         DoCollapseSmall();
-    //save field
-    DoSaveFieldData();
-    //save quad
-    DoSaveQuad();
-    //save setup
-    DoSaveSetup();
-    //close the execution
-    exit(0);
+//    //save field
+//    DoSaveFieldData();
+//    //save quad
+//    DoSaveQuad();
+//    //save setup
+//    DoSaveSetup();
+//    //close the execution
+//    exit(0);
+}
+
+void TW_CALL BatchComputation(void *)
+{
+   DoBatchComputation();
 }
 
 void InitFieldBar(QWidget *w)
@@ -531,14 +550,14 @@ void InitFieldBar(QWidget *w)
     TwAddVarRW(barQuad,"Draw Seq",TW_TYPE_BOOLCPP, &draw_seq," label='Draw Sequences'");
 
 
-    TwAddVarRW(barQuad,"SharpDegree",TW_TYPE_DOUBLE, &SharpDegree," label='Sharp Degree'");
-    TwAddVarRW(barQuad,"LimitConcave",TW_TYPE_DOUBLE, &tri_mesh.LimitConcave," label='Limit Concave'");
+    //TwAddVarRW(barQuad,"SharpDegree",TW_TYPE_DOUBLE, &SharpDegree," label='Sharp Degree'");
+    //TwAddVarRW(barQuad,"LimitConcave",TW_TYPE_DOUBLE, &tri_mesh.LimitConcave," label='Limit Concave'");
 
-    TwAddButton(barQuad,"SetSharp",InitSharpFeatures,0,"label='InitSharp'");
-    TwAddSeparator(barQuad,NULL,NULL);
+    //TwAddButton(barQuad,"SetSharp",InitSharpFeatures,0,"label='InitSharp'");
+    //TwAddSeparator(barQuad,NULL,NULL);
 
-    TwAddButton(barQuad,"AutoRemesh",AutoRemesh,0,"label='AutoRemesh'");
-    TwAddButton(barQuad,"Refine",RefineIfNeeded,0,"label='Refine if needed'");
+//    TwAddButton(barQuad,"AutoRemesh",AutoRemesh,0,"label='AutoRemesh'");
+//    TwAddButton(barQuad,"Refine",RefineIfNeeded,0,"label='Refine if needed'");
 
     TwAddSeparator(barQuad,NULL,NULL);
     TwAddVarRW(barQuad,"Alpha",TW_TYPE_DOUBLE, &FieldParam.alpha_curv," label='Alpha Curvature'");
@@ -553,28 +572,30 @@ void InitFieldBar(QWidget *w)
     TwAddVarRW(barQuad, "Smooth Mode", smoothMode, &FieldParam.SmoothM," label='Smooth Mode' ");
 
     TwAddButton(barQuad,"ComputeField",SmoothCurvatureField,0,"label='Compute Curvature Field'");
-    TwAddButton(barQuad,"SaveFieldData",SaveFieldData,0,"label='Save Field Sharp Remesh Data'");
+
     TwAddSeparator(barQuad,NULL,NULL);
     TwAddButton(barQuad,"Init Anisotropy",InitAnisotropy,0,"label='Init Anisotropy'");
     TwAddVarRW(barQuad,"AlignB",TW_TYPE_BOOLCPP, &alignFieldBorder," label='Align Borders'");
     TwAddVarRW(barQuad,"GlobSmooth",TW_TYPE_DOUBLE, &SmoothGamma," label='Global Smooth Factor'");
-
-
     TwAddButton(barQuad,"Smooth By Anisotropy",SmoothFieldByAnisotropy,0,"label='Smooth By Anisotropy'");
 
     TwAddSeparator(barQuad,NULL,NULL);
+    TwAddButton(barQuad,"SaveFieldData",SaveFieldData,0,"label='Save Field Sharp Remesh Data'");
 
-    TwAddVarRW(barQuad,"Corner Degrees",TW_TYPE_DOUBLE, &CornerDegree," label='Corner Degree'");
-    TwAddButton(barQuad,"Select Corner",SelectCorners,0,"label='Select Corners'");
+    TwAddSeparator(barQuad,NULL,NULL);
+
+//    TwAddVarRW(barQuad,"Corner Degrees",TW_TYPE_DOUBLE, &CornerDegree," label='Corner Degree'");
+//    TwAddButton(barQuad,"Select Corner",SelectCorners,0,"label='Select Corners'");
 
     TwAddVarRW(barQuad,"Gradient",TW_TYPE_DOUBLE, &MiqP.gradient," label='Gradient'");
     TwAddVarRW(barQuad,"Direct Round",TW_TYPE_BOOLCPP, &MiqP.directRound," label='Direct Round'");
     TwAddVarRW(barQuad,"Round Singularities",TW_TYPE_BOOLCPP, &MiqP.round_singularities," label='Round Singularities'");
     TwAddVarRW(barQuad,"IsotropyVsAlign",TW_TYPE_DOUBLE, &miqAnisotropy," label='Isotropy Vs Align'");
-    TwAddVarRW(barQuad,"Align Sharp",TW_TYPE_BOOLCPP, & MiqP.crease_as_feature," label='Align Sharp'");
+//    TwAddVarRW(barQuad,"Align Sharp",TW_TYPE_BOOLCPP, & MiqP.crease_as_feature," label='Align Sharp'");
 
+    TwAddVarRW(barQuad,"Snap Border",TW_TYPE_BOOLCPP, &snapBorder," label='Snap Border'");
     TwAddButton(barQuad,"Quadrangulate",MiqQuadrangulate,0,"label='Miq Quadrangulate'");
-    TwAddButton(barQuad,"SplitNonQuad",SplitQuad,0,"label='Split non Quad'");
+//    TwAddButton(barQuad,"SplitNonQuad",SplitQuad,0,"label='Split non Quad'");
 
 
     TwAddVarRW(barQuad,"Ratio",TW_TYPE_DOUBLE, &smallVal," label='Ratio'");
@@ -583,17 +604,19 @@ void InitFieldBar(QWidget *w)
     //    TwAddVarRW(barRem,"DrawTris",TW_TYPE_BOOL8, &drawTris," label='Draw Tris'");
     //    TwAddVarRW(barRem,"DrawHexa",TW_TYPE_BOOL8, &drawHex," label='Draw Hexa'");
 
-    TwAddVarRW(barQuad,"Optimize Dual",TW_TYPE_BOOL8, &QRef.optimize_for_dual," label='dual Optimize'");
-    TwAddVarRW(barQuad,"Erode Dilate",TW_TYPE_BOOL8, &QRef.erode_dilate," label='erode Dilate'");
-    TwAddVarRW(barQuad,"Dualize",TW_TYPE_BOOL8, &QRef.dualize_final," label='dualize'");
-    TwAddVarRW(barQuad,"Optimize",TW_TYPE_BOOL8, &QRef.final_optimize," label='optimize'");
+//    TwAddVarRW(barQuad,"Optimize Dual",TW_TYPE_BOOL8, &QRef.optimize_for_dual," label='dual Optimize'");
+//    TwAddVarRW(barQuad,"Erode Dilate",TW_TYPE_BOOL8, &QRef.erode_dilate," label='erode Dilate'");
+//    TwAddVarRW(barQuad,"Dualize",TW_TYPE_BOOL8, &QRef.dualize_final," label='dualize'");
+//    TwAddVarRW(barQuad,"Optimize",TW_TYPE_BOOL8, &QRef.final_optimize," label='optimize'");
 
-    TwAddButton(barQuad,"RefineBig",RefineBigFaces,0,"label='Refine Big Faces'");
+//    TwAddButton(barQuad,"RefineBig",RefineBigFaces,0,"label='Refine Big Faces'");
 
+    TwAddSeparator(barQuad,NULL,NULL);
+    TwAddButton(barQuad,"BatchProcess",BatchComputation,0,"label='BatchProcess'");
+    TwAddButton(barQuad,"SaveAll",SaveAllData,0,"label='Save All Data'");
 
-    TwAddButton(barQuad,"SavePoly",SaveQuad,0,"label='Save Polygonal Data'");
-    TwAddButton(barQuad,"SaveSing",SaveSingularities,0,"label='Save Singolarities'");
-    TwAddButton(barQuad,"SaveAbaqus",SaveAbaqus,0,"label='Save Abaqus Data'");
+    //TwAddButton(barQuad,"SaveSing",SaveSingularities,0,"label='Save Singolarities'");
+ //   TwAddButton(barQuad,"SaveAbaqus",SaveAbaqus,0,"label='Save Abaqus Data'");
     //TwAddButton(barQuad,"SaveSing",SaveSingularities,0,"label='Save Singolarities'");
 
 }
@@ -629,7 +652,7 @@ GLWidget::GLWidget(QWidget *parent)
 
     tri_mesh.UpdateDataStructures();
 
-    tri_mesh.LimitConcave=0;
+    //tri_mesh.LimitConcave=0;
     //remeshed_mesh.UpdateDataStructures();
     Gr.Set(tri_mesh.face.begin(),tri_mesh.face.end());
 
@@ -652,12 +675,12 @@ GLWidget::GLWidget(QWidget *parent)
             std::cout<<"Max ABS Field Magnitudo "<<MaxFieldVal<<std::endl;
         }
     }
-    if (pathL!=std::string(""))
-    {
-       std::cout<<"Loading Boundary Conditions"<<std::endl;
-       tri_mesh.LoadBoxBoundaryConditions(pathL);//LoadBoundaryConditions(pathL);
-       std::cout<<"Done Loading Boundary Conditions"<<std::endl;
-    }
+//    if (pathL!=std::string(""))
+//    {
+//       std::cout<<"Loading Boundary Conditions"<<std::endl;
+//       tri_mesh.LoadBoxBoundaryConditions(pathL);//LoadBoundaryConditions(pathL);
+//       std::cout<<"Done Loading Boundary Conditions"<<std::endl;
+//    }
 
     MiqP.gradient=DefaultGradient;
     MiqP.directRound=false;
@@ -666,7 +689,9 @@ GLWidget::GLWidget(QWidget *parent)
 
     if (do_batch)
     {
-        BatchComputation();
+        DoBatchComputation();
+        SaveAll();
+        exit(0);
     }
 }
 
