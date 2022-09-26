@@ -1,11 +1,15 @@
 CONFIG += c++11
 
+#QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.15
+CONFIG -= app_bundle
+
 VCGLIBDIR = $$PWD/../vcglib
 GLEWDIR   = $$PWD/../code/lib/glew
 ANTDIR    = $$PWD/../code/lib/AntTweakBar1.16
 EIGENLIB  = $$PWD/lib/libigl/external/nanogui/ext/eigen
 IGLLIB    = $$PWD/lib/libigl/include/
 COMISODIR = $$PWD/lib/CoMISo
+
 
 INCLUDEPATH += $$VCGLIBDIR
 INCLUDEPATH += $$GLEWDIR/include
@@ -20,7 +24,7 @@ HEADERS       = ./app/glwidget.h \
 
 SOURCES       = ./app/glwidget.cpp \
                 ./app/main.cpp \
-    		
+
 QT           += opengl
 
 
@@ -63,6 +67,7 @@ mac{
   LIBS +=$$ANTDIR/lib/libAntTweakBar.dylib
   QMAKE_POST_LINK +="cp -P $$ANTDIR/lib/libAntTweakBar.dylib . ; "
   QMAKE_POST_LINK +="install_name_tool -change ../lib/libAntTweakBar.dylib ./libAntTweakBar.dylib $$TARGET ; "
+  QMAKE_POST_LINK +="cp -P $$COMISODIR/build/Build/lib/CoMISo/libCoMISo.dylib . ; "
   #QMAKE_POST_LINK +="install_name_tool -change libCoMISo.dylib $$COMISODIR/build/Build/lib/CoMISo/libCoMISo.dylib $$TARGET ;"
   #LIBS += -L $$COMISODIR/build/Build/lib/CoMISo/ -lCoMISo
   #INCLUDEPATH += $$COMISODIR/build/Build/lib/CoMISo
