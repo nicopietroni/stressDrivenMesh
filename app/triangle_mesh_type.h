@@ -7,6 +7,7 @@
 #include <vcg/simplex/face/topology.h>
 #include <wrap/io_trimesh/import.h>
 #include <wrap/io_trimesh/export.h>
+#include <gl.h>
 #include <wrap/gl/trimesh.h>
 //
 #include <wrap/igl/smooth_field.h>
@@ -15,6 +16,10 @@
 #include <iostream>
 #include <fstream>
 #include <vcg/complex/algorithms/polygonal_algorithms.h>
+
+#include<vcg/complex/algorithms/point_sampling.h>
+#include<vcg/complex/algorithms/voronoi_processing.h>
+#include<vcg/space/index/grid_static_ptr.h>
 
 class PolyFace;
 class PolyVertex;
@@ -1894,7 +1899,24 @@ public:
         glPopAttrib();
     }
 
-
+    void SampleFacesV(size_t num_samples=5000)
+    {
+        std::vector<CoordType> poissonSamples;
+        ScalarType radius=0;
+        vcg::tri::PoissonSampling<MyTriMesh>(*this, poissonSamples, num_samples, radius, (ScalarType)1);
+        vcg::tri::UpdateFlags<MyTriMesh>::FaceClearV(*this);
+        vcg::GridStaticPtr<MyTriMesh::FaceType,ScalarType> MyGrid;
+        MyGrid.Set(face.begin(),face.end());
+        std::cout<<"Sampled:"<<poissonSamples.size()<<"samples"<<std::endl;
+        for (size_t i=0;i<poissonSamples.size();i++)
+        {
+           CoordType closePt;
+           ScalarType minD;
+           FaceType *f=vcg::tri::GetClosestFaceBase(*this,MyGrid,poissonSamples[i],bbox.Diag(),minD,closePt);
+           assert(f!=NULL);
+           f->SetV();
+        }
+    }
 };
 
 

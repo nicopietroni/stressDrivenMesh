@@ -38,6 +38,7 @@
 **
 ****************************************************************************/
 
+
 #include <QApplication>
 #include <QDesktopWidget>
 #include <GL/glew.h>
@@ -63,8 +64,8 @@ extern bool snapBorder;
 extern bool alignFieldBorder;
 extern typename MyTriMesh::ScalarType miqAnisotropy;
 extern typename MyTriMesh::ScalarType SmoothGamma;
-extern MyTriMesh::ScalarType smallVal
-;
+extern MyTriMesh::ScalarType smallVal;
+
 bool CheckExist(const std::string &path)
 {
     QString pathQ=QString(path.c_str());

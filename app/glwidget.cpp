@@ -70,7 +70,7 @@ std::string pathL="";
 vcg::Trackball track;//the active manipulator
 
 bool drawfield=false;
-bool drawmagnitudo=false;
+bool drawmagnitudo=true;
 bool drawsingularities=false;
 
 MyTriMesh tri_mesh;
@@ -289,6 +289,7 @@ void TW_CALL SmoothCurvatureField(void *)
     tri_mesh.SmoothField(FieldParam);
     drawfield=true;
     drawsingularities=true;
+    tri_mesh.SampleFacesV();
     //Gr.Set(tri_mesh.face.begin(),tri_mesh.face.end());
 }
 
@@ -526,6 +527,11 @@ void DoBatchComputation()
 //    exit(0);
 }
 
+void TW_CALL ColorUniformly(void *)
+{
+   vcg::tri::UpdateColor<MyTriMesh>::PerFaceConstant(tri_mesh);
+}
+
 void TW_CALL BatchComputation(void *)
 {
    DoBatchComputation();
@@ -546,6 +552,8 @@ void InitFieldBar(QWidget *w)
     TwAddVarRW(barQuad, "Draw Mode", drawMode, &drawmode, " keyIncr='<' keyDecr='>' help='Change draw mode.' ");
 
     TwAddVarRW(barQuad,"Draw Field",TW_TYPE_BOOLCPP, &drawfield," label='Draw Field'");
+    TwAddVarRW(barQuad,"Draw Magnitudo",TW_TYPE_BOOLCPP, &drawmagnitudo," label='Draw Magnitudo'");
+
     TwAddVarRW(barQuad,"Draw Sing",TW_TYPE_BOOLCPP, &drawsingularities," label='Draw Singularities'");
     TwAddVarRW(barQuad,"Draw Seq",TW_TYPE_BOOLCPP, &draw_seq," label='Draw Sequences'");
 
@@ -575,6 +583,8 @@ void InitFieldBar(QWidget *w)
 
     TwAddSeparator(barQuad,NULL,NULL);
     TwAddButton(barQuad,"Init Anisotropy",InitAnisotropy,0,"label='Init Anisotropy'");
+    TwAddButton(barQuad,"ColorUniformly",ColorUniformly,0,"label='Color Uniformly'");
+
     TwAddVarRW(barQuad,"AlignB",TW_TYPE_BOOLCPP, &alignFieldBorder," label='Align Borders'");
     TwAddVarRW(barQuad,"GlobSmooth",TW_TYPE_DOUBLE, &SmoothGamma," label='Global Smooth Factor'");
     TwAddButton(barQuad,"Smooth By Anisotropy",SmoothFieldByAnisotropy,0,"label='Smooth By Anisotropy'");
@@ -651,7 +661,7 @@ GLWidget::GLWidget(QWidget *parent)
     //    vcg::tri::Append<MyTriMesh,MyTriMesh>::Mesh(remeshed_mesh,tri_mesh);
 
     tri_mesh.UpdateDataStructures();
-
+    tri_mesh.SampleFacesV();
     //tri_mesh.LimitConcave=0;
     //remeshed_mesh.UpdateDataStructures();
     Gr.Set(tri_mesh.face.begin(),tri_mesh.face.end());
@@ -773,13 +783,15 @@ void GLWidget::paintGL ()
     if (drawfield)
     {
         if (MinFieldVal==MaxFieldVal)
-            vcg::GLField<MyTriMesh>::GLDrawFaceField(tri_mesh,false,false,0.007);
+            vcg::GLField<MyTriMesh>::GLDrawFaceField(tri_mesh,false,false,0.007,0,0,false,true);
         else
         {
             //            std::cout<<"Min "<<MinFieldVal<<std::endl;
             //            std::cout<<"Max "<<MaxFieldVal<<std::endl;
-
-            vcg::GLField<MyTriMesh>::GLDrawFaceField(tri_mesh,false,false,0.007,MaxFieldVal,MinFieldVal,true);
+            if (drawmagnitudo)
+                vcg::GLField<MyTriMesh>::GLDrawFaceField(tri_mesh,false,false,0.007,MaxFieldVal,MinFieldVal,true,true);
+            else
+                vcg::GLField<MyTriMesh>::GLDrawFaceField(tri_mesh,false,false,0.007,0,0,false,true);
         }
     }
     if (drawsingularities)

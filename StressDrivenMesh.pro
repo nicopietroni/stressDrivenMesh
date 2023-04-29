@@ -21,8 +21,8 @@ HEADERS       = ./app/glwidget.h \
 SOURCES       = ./app/glwidget.cpp \
                 ./app/main.cpp \
     		
-QT           += opengl
-
+QT += opengl
+QT += widgets
 
 DEFINES += GLEW_STATIC
 DEFINES += INCLUDE_TEMPLATES
