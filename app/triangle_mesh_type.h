@@ -11,6 +11,10 @@
 #include <wrap/gl/trimesh.h>
 //
 #include <wrap/igl/smooth_field.h>
+#include <igl/frame_field_deformer.h>
+#include <vcg/complex/algorithms/mesh_to_matrix.h>
+#include <igl/frame_to_cross_field.h>
+
 #include <wrap/io_trimesh/export_field.h>
 #include <wrap/io_trimesh/import_field.h>
 #include <iostream>
@@ -20,6 +24,7 @@
 #include<vcg/complex/algorithms/point_sampling.h>
 #include<vcg/complex/algorithms/voronoi_processing.h>
 #include<vcg/space/index/grid_static_ptr.h>
+#include<vcg/math/matrix33.h>
 
 class PolyFace;
 class PolyVertex;
@@ -772,6 +777,7 @@ class MyTriVertex:public vcg::Vertex<TriUsedTypes,
         vcg::vertex::Color4b,
         vcg::vertex::Normal3d,
         vcg::vertex::VFAdj,
+        vcg::vertex::Mark,
         vcg::vertex::BitFlags,
         vcg::vertex::CurvatureDird,
         vcg::vertex::Qualityd,
@@ -781,6 +787,9 @@ public:
 
     bool IsFix;
     bool IsBound;
+    CoordType RPos;
+    void InitRestPos(){RPos=P();}
+    void MoveToRestPos(){P()=RPos;}
 };
 
 class MyTriEdge:public vcg::Edge<TriUsedTypes,
@@ -878,17 +887,17 @@ private:
         EdgePred(std::map<CoordPair,CoordType> *_SplitOps){SplitOps=_SplitOps;}
     };
 
-//    void InitEdgeType()
-//    {
-//        for (size_t i=0;i<face.size();i++)
-//            for (size_t j=0;j<3;j++)
-//            {
-//                if (IsConcaveEdge(face[i],j))
-//                    face[i].FKind[j]=ETConcave;
-//                else
-//                    face[i].FKind[j]=ETConvex;
-//            }
-//    }
+    //    void InitEdgeType()
+    //    {
+    //        for (size_t i=0;i<face.size();i++)
+    //            for (size_t j=0;j<3;j++)
+    //            {
+    //                if (IsConcaveEdge(face[i],j))
+    //                    face[i].FKind[j]=ETConcave;
+    //                else
+    //                    face[i].FKind[j]=ETConvex;
+    //            }
+    //    }
 
     void InitFeatureCoordsTable()
     {
@@ -965,176 +974,176 @@ private:
         return true;
     }
 
-//    bool IsConcaveEdge(const FaceType &f0,int IndexE)
-//    {
-//        FaceType *f1=f0.cFFp(IndexE);
-//        if (f1==&f0)return false;
-//        CoordType N0=f0.cN();
-//        CoordType N1=f1->cN();
-//        CoordType EdgeDir=f0.cP1(IndexE)-f0.cP0(IndexE);
-//        EdgeDir.Normalize();
-//        CoordType Cross=N0^N1;
-//        return ((Cross*EdgeDir)<LimitConcave);
-//    }
+    //    bool IsConcaveEdge(const FaceType &f0,int IndexE)
+    //    {
+    //        FaceType *f1=f0.cFFp(IndexE);
+    //        if (f1==&f0)return false;
+    //        CoordType N0=f0.cN();
+    //        CoordType N1=f1->cN();
+    //        CoordType EdgeDir=f0.cP1(IndexE)-f0.cP0(IndexE);
+    //        EdgeDir.Normalize();
+    //        CoordType Cross=N0^N1;
+    //        return ((Cross*EdgeDir)<LimitConcave);
+    //    }
 
 
-//    bool SplitAdjacentTerminalVertices()
-//    {
-//        InitFeatureCoordsTable();
-//        std::vector<size_t> PerVertConcaveEdge(vert.size(),0);
-//        std::vector<size_t> PerVertConvexEdge(vert.size(),0);
-//        //count concave vs convex
-//        for (size_t i=0;i<face.size();i++)
-//        {
-//            for (size_t j=0;j<3;j++)
-//            {
-//                if (!face[i].IsFaceEdgeS(j))continue;
-//                size_t IndexV0=vcg::tri::Index(*this,face[i].V0(j));
-//                size_t IndexV1=vcg::tri::Index(*this,face[i].V1(j));
-//                //only on one side
-//                if (IndexV0>IndexV1)continue;
-//                if (IsConcaveEdge(face[i],j))
-//                {
-//                    PerVertConcaveEdge[IndexV0]++;
-//                    PerVertConcaveEdge[IndexV1]++;
-//                }
-//                else
-//                {
-//                    PerVertConvexEdge[IndexV0]++;
-//                    PerVertConvexEdge[IndexV1]++;
-//                }
-//            }
-//        }
+    //    bool SplitAdjacentTerminalVertices()
+    //    {
+    //        InitFeatureCoordsTable();
+    //        std::vector<size_t> PerVertConcaveEdge(vert.size(),0);
+    //        std::vector<size_t> PerVertConvexEdge(vert.size(),0);
+    //        //count concave vs convex
+    //        for (size_t i=0;i<face.size();i++)
+    //        {
+    //            for (size_t j=0;j<3;j++)
+    //            {
+    //                if (!face[i].IsFaceEdgeS(j))continue;
+    //                size_t IndexV0=vcg::tri::Index(*this,face[i].V0(j));
+    //                size_t IndexV1=vcg::tri::Index(*this,face[i].V1(j));
+    //                //only on one side
+    //                if (IndexV0>IndexV1)continue;
+    //                if (IsConcaveEdge(face[i],j))
+    //                {
+    //                    PerVertConcaveEdge[IndexV0]++;
+    //                    PerVertConcaveEdge[IndexV1]++;
+    //                }
+    //                else
+    //                {
+    //                    PerVertConvexEdge[IndexV0]++;
+    //                    PerVertConvexEdge[IndexV1]++;
+    //                }
+    //            }
+    //        }
 
-//        //count concave vs convex
-//        std::map<CoordPair,CoordType> ToBeSplitted;
-//        std::set<CoordPair> NewFeatureEdges;
-//        for (size_t i=0;i<face.size();i++)
-//        {
-//            for (size_t j=0;j<3;j++)
-//            {
-//                if (!face[i].IsFaceEdgeS(j))continue;
-//                size_t IndexV0=vcg::tri::Index(*this,face[i].V0(j));
-//                size_t IndexV1=vcg::tri::Index(*this,face[i].V1(j));
-//                size_t ConcaveEV0=PerVertConcaveEdge[IndexV0];
-//                size_t ConcaveEV1=PerVertConcaveEdge[IndexV1];
-//                size_t ConvexEV0=PerVertConvexEdge[IndexV0];
-//                size_t ConvexEV1=PerVertConvexEdge[IndexV1];
-//                size_t NumEV0=ConcaveEV0+ConvexEV0;
-//                size_t NumEV1=ConcaveEV1+ConvexEV1;
-//                bool IsCornerV0=false;
-//                bool IsCornerV1=false;
+    //        //count concave vs convex
+    //        std::map<CoordPair,CoordType> ToBeSplitted;
+    //        std::set<CoordPair> NewFeatureEdges;
+    //        for (size_t i=0;i<face.size();i++)
+    //        {
+    //            for (size_t j=0;j<3;j++)
+    //            {
+    //                if (!face[i].IsFaceEdgeS(j))continue;
+    //                size_t IndexV0=vcg::tri::Index(*this,face[i].V0(j));
+    //                size_t IndexV1=vcg::tri::Index(*this,face[i].V1(j));
+    //                size_t ConcaveEV0=PerVertConcaveEdge[IndexV0];
+    //                size_t ConcaveEV1=PerVertConcaveEdge[IndexV1];
+    //                size_t ConvexEV0=PerVertConvexEdge[IndexV0];
+    //                size_t ConvexEV1=PerVertConvexEdge[IndexV1];
+    //                size_t NumEV0=ConcaveEV0+ConvexEV0;
+    //                size_t NumEV1=ConcaveEV1+ConvexEV1;
+    //                bool IsCornerV0=false;
+    //                bool IsCornerV1=false;
 
-//                if (NumEV0==1)IsCornerV0=true;
-//                if (NumEV0>2)IsCornerV0=true;
-//                if ((ConcaveEV0>0)&&(ConvexEV0>0))IsCornerV0=true;
+    //                if (NumEV0==1)IsCornerV0=true;
+    //                if (NumEV0>2)IsCornerV0=true;
+    //                if ((ConcaveEV0>0)&&(ConvexEV0>0))IsCornerV0=true;
 
-//                if (NumEV1==1)IsCornerV1=true;
-//                if (NumEV1>2)IsCornerV1=true;
-//                if ((ConcaveEV1>0)&&(ConvexEV1>0))IsCornerV1=true;
+    //                if (NumEV1==1)IsCornerV1=true;
+    //                if (NumEV1>2)IsCornerV1=true;
+    //                if ((ConcaveEV1>0)&&(ConvexEV1>0))IsCornerV1=true;
 
-//                //                std::cout<<"ConcaveEV0 "<<ConcaveEV0<<std::endl;
-//                //                std::cout<<"ConcaveEV1 "<<ConcaveEV1<<std::endl;
-//                //                std::cout<<"ConvexEV0 "<<ConvexEV0<<std::endl;
-//                //                std::cout<<"ConvexEV1 "<<ConvexEV1<<std::endl;
-//                if (IsCornerV0 && IsCornerV1)
-//                {
-//                    CoordType P0=face[i].P0(j);
-//                    CoordType P1=face[i].P1(j);
-//                    CoordPair Key(std::min(P0,P1),std::max(P0,P1));
-//                    CoordType Mid=(P0+P1)/2;
-//                    ToBeSplitted[Key]=Mid;
-//                    CoordPair newEdge0(std::min(P0,Mid),std::max(P0,Mid));
-//                    CoordPair newEdge1(std::min(P1,Mid),std::max(P1,Mid));
-//                    NewFeatureEdges.insert(newEdge0);
-//                    NewFeatureEdges.insert(newEdge1);
-//                }
-//            }
-//        }
+    //                //                std::cout<<"ConcaveEV0 "<<ConcaveEV0<<std::endl;
+    //                //                std::cout<<"ConcaveEV1 "<<ConcaveEV1<<std::endl;
+    //                //                std::cout<<"ConvexEV0 "<<ConvexEV0<<std::endl;
+    //                //                std::cout<<"ConvexEV1 "<<ConvexEV1<<std::endl;
+    //                if (IsCornerV0 && IsCornerV1)
+    //                {
+    //                    CoordType P0=face[i].P0(j);
+    //                    CoordType P1=face[i].P1(j);
+    //                    CoordPair Key(std::min(P0,P1),std::max(P0,P1));
+    //                    CoordType Mid=(P0+P1)/2;
+    //                    ToBeSplitted[Key]=Mid;
+    //                    CoordPair newEdge0(std::min(P0,Mid),std::max(P0,Mid));
+    //                    CoordPair newEdge1(std::min(P1,Mid),std::max(P1,Mid));
+    //                    NewFeatureEdges.insert(newEdge0);
+    //                    NewFeatureEdges.insert(newEdge1);
+    //                }
+    //            }
+    //        }
 
 
-//        std::cout<<"Performing "<<ToBeSplitted.size()<< " split ops"<<std::endl;
-//        if (ToBeSplitted.size()==0)return false;
+    //        std::cout<<"Performing "<<ToBeSplitted.size()<< " split ops"<<std::endl;
+    //        if (ToBeSplitted.size()==0)return false;
 
-//        SplitLev splMd(&ToBeSplitted);
-//        EdgePred eP(&ToBeSplitted);
+    //        SplitLev splMd(&ToBeSplitted);
+    //        EdgePred eP(&ToBeSplitted);
 
-//        //do the final split
-//        bool done=vcg::tri::RefineE<MeshType,SplitLev,EdgePred>(*this,splMd,eP);
+    //        //do the final split
+    //        bool done=vcg::tri::RefineE<MeshType,SplitLev,EdgePred>(*this,splMd,eP);
 
-//        //set old features
-//        SetFeatureFromTable();
+    //        //set old features
+    //        SetFeatureFromTable();
 
-//        //and the new ones
-//        for (size_t i=0;i<face.size();i++)
-//        {
-//            for (size_t j=0;j<3;j++)
-//            {
-//                CoordType P0=face[i].P0(j);
-//                CoordType P1=face[i].P1(j);
-//                CoordPair Key(std::min(P0,P1),std::max(P0,P1));
-//                if (NewFeatureEdges.count(Key)==0)continue;
-//                face[i].SetFaceEdgeS(j);
-//            }
-//        }
-//        return done;
-//    }
+    //        //and the new ones
+    //        for (size_t i=0;i<face.size();i++)
+    //        {
+    //            for (size_t j=0;j<3;j++)
+    //            {
+    //                CoordType P0=face[i].P0(j);
+    //                CoordType P1=face[i].P1(j);
+    //                CoordPair Key(std::min(P0,P1),std::max(P0,P1));
+    //                if (NewFeatureEdges.count(Key)==0)continue;
+    //                face[i].SetFaceEdgeS(j);
+    //            }
+    //        }
+    //        return done;
+    //    }
 
-//    bool SplitAdjacentEdgeSharpFromEdgeSel()
-//    {
-//        InitFeatureCoordsTable();
-//        vcg::tri::UpdateSelection<MeshType>::VertexClear(*this);
-//        //InitFaceEdgeSelFromFeatureSeq();
+    //    bool SplitAdjacentEdgeSharpFromEdgeSel()
+    //    {
+    //        InitFeatureCoordsTable();
+    //        vcg::tri::UpdateSelection<MeshType>::VertexClear(*this);
+    //        //InitFaceEdgeSelFromFeatureSeq();
 
-//        std::set<std::pair<CoordType,CoordType> > EdgePos;
+    //        std::set<std::pair<CoordType,CoordType> > EdgePos;
 
-//        for (size_t i=0;i<face.size();i++)
-//        {
-//            for (size_t j=0;j<3;j++)
-//            {
-//                if (!face[i].IsFaceEdgeS(j))continue;
-//                int VIndex0=vcg::tri::Index(*this,face[i].V0(j));
-//                int VIndex1=vcg::tri::Index(*this,face[i].V1(j));
-//                CoordType P0=vert[VIndex0].P();
-//                CoordType P1=vert[VIndex1].P();
-//                vert[VIndex0].SetS();
-//                vert[VIndex1].SetS();
-//                EdgePos.insert(std::pair<CoordType,CoordType>(std::min(P0,P1),std::max(P0,P1)));
-//            }
-//        }
+    //        for (size_t i=0;i<face.size();i++)
+    //        {
+    //            for (size_t j=0;j<3;j++)
+    //            {
+    //                if (!face[i].IsFaceEdgeS(j))continue;
+    //                int VIndex0=vcg::tri::Index(*this,face[i].V0(j));
+    //                int VIndex1=vcg::tri::Index(*this,face[i].V1(j));
+    //                CoordType P0=vert[VIndex0].P();
+    //                CoordType P1=vert[VIndex1].P();
+    //                vert[VIndex0].SetS();
+    //                vert[VIndex1].SetS();
+    //                EdgePos.insert(std::pair<CoordType,CoordType>(std::min(P0,P1),std::max(P0,P1)));
+    //            }
+    //        }
 
-//        //then save the edges to be splitted
-//        std::map<CoordPair,CoordType> ToBeSplitted;
-//        for (size_t i=0;i<face.size();i++)
-//        {
-//            //find the number of edges
-//            int Num=0;
-//            for (size_t j=0;j<3;j++)
-//            {
-//                int VIndex0=vcg::tri::Index(*this,face[i].V0(j));
-//                int VIndex1=vcg::tri::Index(*this,face[i].V1(j));
-//                if ((!vert[VIndex0].IsS())||(!vert[VIndex1].IsS()))continue;
-//                CoordType P0=vert[VIndex0].P();
-//                CoordType P1=vert[VIndex1].P();
-//                std::pair<CoordType,CoordType> Key(std::min(P0,P1),std::max(P0,P1));
-//                if (EdgePos.count(Key)==1){Num++;continue;}
+    //        //then save the edges to be splitted
+    //        std::map<CoordPair,CoordType> ToBeSplitted;
+    //        for (size_t i=0;i<face.size();i++)
+    //        {
+    //            //find the number of edges
+    //            int Num=0;
+    //            for (size_t j=0;j<3;j++)
+    //            {
+    //                int VIndex0=vcg::tri::Index(*this,face[i].V0(j));
+    //                int VIndex1=vcg::tri::Index(*this,face[i].V1(j));
+    //                if ((!vert[VIndex0].IsS())||(!vert[VIndex1].IsS()))continue;
+    //                CoordType P0=vert[VIndex0].P();
+    //                CoordType P1=vert[VIndex1].P();
+    //                std::pair<CoordType,CoordType> Key(std::min(P0,P1),std::max(P0,P1));
+    //                if (EdgePos.count(Key)==1){Num++;continue;}
 
-//                ToBeSplitted[Key]=(P0+P1)/2;
-//            }
-//            assert(Num<=2);//this should be already solved
-//        }
-//        std::cout<<"Performing "<<ToBeSplitted.size()<< " split ops"<<std::endl;
+    //                ToBeSplitted[Key]=(P0+P1)/2;
+    //            }
+    //            assert(Num<=2);//this should be already solved
+    //        }
+    //        std::cout<<"Performing "<<ToBeSplitted.size()<< " split ops"<<std::endl;
 
-//        SplitLev splMd(&ToBeSplitted);
-//        EdgePred eP(&ToBeSplitted);
+    //        SplitLev splMd(&ToBeSplitted);
+    //        EdgePred eP(&ToBeSplitted);
 
-//        //do the final split
-//        bool done=vcg::tri::RefineE<MeshType,SplitLev,EdgePred>(*this,splMd,eP);
+    //        //do the final split
+    //        bool done=vcg::tri::RefineE<MeshType,SplitLev,EdgePred>(*this,splMd,eP);
 
-//        UpdateDataStructures();
-//        SetFeatureFromTable();
-//        return done;
-//    }
+    //        UpdateDataStructures();
+    //        SetFeatureFromTable();
+    //        return done;
+    //    }
 
     typedef vcg::tri::FieldSmoother<MyTriMesh> FieldSmootherType;
 
@@ -1178,19 +1187,19 @@ public:
         SetFeatureFromTable();
     }
 
-//    void RefineIfNeeded()
-//    {
-//        bool has_refined=false;
-//        do
-//        {
-//            has_refined=false;
-//            has_refined|=RefineInternalFacesStepFromEdgeSel();
-//            has_refined|=SplitAdjacentEdgeSharpFromEdgeSel();
-//            //has_refined|=SplitAdjacentTerminalVertices();
-//            //has_refined|=SplitEdgeSharpSharingVerticesFromEdgeSel();
-//        }while (has_refined);
-//        InitEdgeType();
-//    }
+    //    void RefineIfNeeded()
+    //    {
+    //        bool has_refined=false;
+    //        do
+    //        {
+    //            has_refined=false;
+    //            has_refined|=RefineInternalFacesStepFromEdgeSel();
+    //            has_refined|=SplitAdjacentEdgeSharpFromEdgeSel();
+    //            //has_refined|=SplitAdjacentTerminalVertices();
+    //            //has_refined|=SplitEdgeSharpSharingVerticesFromEdgeSel();
+    //        }while (has_refined);
+    //        InitEdgeType();
+    //    }
 
     void InitBound()
     {
@@ -1355,6 +1364,7 @@ public:
 
     bool LoadBLK(const std::string &field_filename)
     {
+        float minF=0.0001;
         MeshType vertMesh;
 
         std::cout<<"Loading "<<field_filename.c_str()<<std::endl;
@@ -1377,8 +1387,8 @@ public:
             CoordType VPos(Px,Py,Pz);
             vcg::tri::Allocator<MeshType>::AddVertex(vertMesh,VPos);
 
-            vertMesh.vert.back().K1()=(Mag1);
-            vertMesh.vert.back().K2()=(Mag2);
+            vertMesh.vert.back().K1()=(std::max(Mag1,minF));
+            vertMesh.vert.back().K2()=(std::max(Mag2,minF));
 
             vertMesh.vert.back().PD1()=CoordType(V1x,V1y,V1z);
             vertMesh.vert.back().PD1().Normalize();
@@ -1899,6 +1909,527 @@ public:
         glPopAttrib();
     }
 
+    void InitRestPos()
+    {
+        for (size_t i=0;i<vert.size();i++)
+            vert[i].InitRestPos();
+    }
+
+    void MakeFieldTangentToSurface()
+    {
+        vcg::tri::UpdateNormal<MyTriMesh>::PerFaceNormalized(*this);
+        for (size_t i=0;i<face.size();i++)
+        {
+            CoordType D1=face[i].PD1();
+            CoordType D2=face[i].PD2();
+            D1.Normalize();
+            D2.Normalize();
+
+            CoordType CurrNorm=D1^D2;
+            CurrNorm.Normalize();
+
+            CoordType TargetNorm=face[i].N();
+
+            if ((CurrNorm*TargetNorm<0))
+                CurrNorm=-CurrNorm;
+
+            vcg::Matrix33<ScalarType> RotNorm=vcg::RotationMatrix(CurrNorm,TargetNorm);
+            D1=RotNorm*D1;
+            D2=RotNorm*D2;
+
+            face[i].PD1()=D1;
+            face[i].PD2()=D2;
+        }
+    }
+
+    void MoveToRestPos()
+    {
+        for (size_t i=0;i<vert.size();i++)
+            vert[i].MoveToRestPos();
+    }
+
+    //    void MeshToEigen(Eigen::MatrixXd& V,
+    //                     Eigen::MatrixXi& F,
+    //                     Eigen::MatrixXd& D1,
+    //                     Eigen::MatrixXd& D2)
+    //    {
+
+    //        // copy vertices
+    //        for (int i = 0; i < VN(); i++)
+    //            for (int j = 0; j < 3; j++)
+    //                V(i,j) = vert[i].cP()[j];
+
+    //        for (int i = 0; i < FN(); i++)
+    //            for (int j = 0; j < 3; j++)
+    //            {
+    //                ///set the index to the vertices
+    //                F(i,j) = vcg::tri::Index((*this),face[i].V(j));
+    //            }
+
+    //        for (int i = 0; i < FN(); i++)
+    //        {
+    //            CoordType PD1=face[i].cPD1();
+    //            CoordType PD2=face[i].cPD2();
+    //            PD1.Normalize();
+    //            PD2.Normalize();
+    //            for (int j = 0; j < 3; j++)
+    //            {
+    //                ///set the
+    //                D1(i,j)= PD1[j];
+    //                D2(i,j)= PD2[j];
+    //            }
+    //        }
+    //        //        // copy faces
+    //        //        VertexType *v0 = &vert[0];
+    //        //        for (int i = 0; i < FN(); i++)
+    //        //            for (int j = 0; j < 3; j++)
+    //        //            {
+    //        //                ///set the index to the vertices
+    //        //                F(i,j) = (int)(face[i].V(j) - v0);
+    //        //                ///set the
+    //        //                D1(i,j)= face[i].cPD1()[j];
+    //        //                D2(i,j)= face[i].cPD2()[j];
+    //        //                assert(F(i,j) >= 0 && F(i,j) < VN());
+    //        //            }
+
+    //    }
+
+    void MeshToEigen(Eigen::MatrixXd& V,
+                     Eigen::MatrixXi& F)
+    {
+
+        // copy vertices
+        for (int i = 0; i < VN(); i++)
+            for (int j = 0; j < 3; j++)
+                V(i,j) = vert[i].cP()[j];
+
+        for (int i = 0; i < FN(); i++)
+            for (int j = 0; j < 3; j++)
+            {
+                ///set the index to the vertices
+                F(i,j) = vcg::tri::Index((*this),face[i].V(j));
+            }
+
+        //        for (int i = 0; i < FN(); i++)
+        //        {
+        //            CoordType PD1=face[i].cPD1();
+        //            CoordType PD2=face[i].cPD2();
+        //            PD1.Normalize();
+        //            PD2.Normalize();
+        //            for (int j = 0; j < 3; j++)
+        //            {
+        //                ///set the
+        //                D1(i,j)= PD1[j];
+        //                D2(i,j)= PD2[j];
+        //            }
+        //        }
+        //        // copy faces
+        //        VertexType *v0 = &vert[0];
+        //        for (int i = 0; i < FN(); i++)
+        //            for (int j = 0; j < 3; j++)
+        //            {
+        //                ///set the index to the vertices
+        //                F(i,j) = (int)(face[i].V(j) - v0);
+        //                ///set the
+        //                D1(i,j)= face[i].cPD1()[j];
+        //                D2(i,j)= face[i].cPD2()[j];
+        //                assert(F(i,j) >= 0 && F(i,j) < VN());
+        //            }
+
+    }
+
+//    void ClampNorm(CoordType &Dir,
+//                   const ScalarType &minV,
+//                   const ScalarType &maxV)
+//    {
+//        ScalarType N=Dir.Norm();
+//        N=std::min(N,maxV);
+//        N=std::max(N,minV);
+//        Dir.normalize();
+//        Dir*=N;
+//    }
+
+//    void InterpNorm(CoordType &Dir,
+//                    const ScalarType &minV,
+//                    const ScalarType &maxV,
+//                    const ScalarType &multiplier)
+//    {
+//        //        ScalarType N=Dir.Norm();
+//        //        assert(Dir.Norm()>=minV);
+//        //        assert(Dir.Norm()<=maxV);
+//        assert(multiplier>1);
+
+//        ScalarType L0=1;//(ScalarType)1/multiplier;
+//        ScalarType L1=multiplier;
+//        ScalarType value=Dir.Norm();
+
+//        // Calculate the ratio between the input value and the value range
+//        ScalarType ratio = (value - minV) / (maxV - minV);
+
+//        // Map the ratio to the output range
+//        ScalarType mappedValue = L0 + ratio * (L1 - L0);
+
+//        Dir.Normalize();
+//        Dir*=mappedValue;
+//    }
+
+//    void DeformToIsotropicFrame(const ScalarType &lambda_smooth=0.1,
+//                                const ScalarType &maxRatio=4,
+//                                const ScalarType &filterPerc=0.1)
+//    {
+//        MoveToRestPos();
+//        //InitRestPos();
+
+//        //        DefPos.clear();
+//        //        DefD1.clear();
+//        //        DefD2.clear();
+
+//        //        DefPos.resize(mesh.VN(),CoordType(0,0,0));
+
+//        // create eigen matrix of vertices
+//        Eigen::MatrixXd V(VN(), 3);
+//        Eigen::MatrixXd V_deformed(VN(), 3);
+
+//        // create eigen matrix of faces
+//        Eigen::MatrixXi F(FN(), 3);
+//        Eigen::MatrixXd D1(FN(), 3);
+//        Eigen::MatrixXd D2(FN(), 3);
+
+//        Eigen::MatrixXd D1_deformed(FN(), 3);
+//        Eigen::MatrixXd D2_deformed(FN(), 3);
+
+//        //filter the outlayers
+//        std::vector<ScalarType> Norms;
+//        std::vector<CoordType> PD1;
+//        std::vector<CoordType> PD2;
+//        for (int i = 0; i < face.size(); i++)
+//        {
+//            Norms.push_back(face[i].cPD1().Norm());
+//            Norms.push_back(face[i].cPD2().Norm());
+//            PD1.push_back(face[i].cPD1());
+//            PD2.push_back(face[i].cPD2());
+//        }
+//        std::sort(Norms.begin(),Norms.end());
+//        int minVIdx=floor(Norms.size()*filterPerc+0.5);
+//        int maxVIdx=floor(Norms.size()*(1-filterPerc)+0.5);
+//        minVIdx=std::max(minVIdx,0);
+//        maxVIdx=std::min(maxVIdx,(int)Norms.size()-1);
+//        ScalarType minN=Norms[minVIdx];
+//        ScalarType maxN=Norms[maxVIdx];
+//        std::cout<<"MaxN:"<<maxN<<std::endl;
+//        std::cout<<"MinN:"<<minN<<std::endl;
+//        for (int i = 0; i < face.size(); i++)
+//        {
+//            ClampNorm(PD1[i],minN,maxN);
+//            ClampNorm(PD2[i],minN,maxN);
+//            InterpNorm(PD1[i],minN,maxN,maxRatio);
+//            InterpNorm(PD2[i],minN,maxN,maxRatio);
+//            //            PD1[i].Normalize();
+//            //            PD2[i].Normalize();
+//        }
+
+//        ///then copy the mesh to vector product
+//        MeshToEigen(V,F);//,D1,D2);
+
+//        for (int i = 0; i < FN(); i++)
+//        {
+//            for (int j = 0; j < 3; j++)
+//            {
+//                ///set the
+//                D1(i,j)= PD1[i][j];
+//                D2(i,j)= PD2[i][j];
+//            }
+//        }
+
+//        igl::frame_field_deformer(V,F,D1,D2,V_deformed,D1_deformed,D2_deformed,50,lambda_smooth);//,num_ite,Lambda);
+
+
+//        //                //save the deformed frame field
+//        //                DefD1.clear();
+//        //                DefD2.clear();
+//        //                DefD1.resize(mesh.face.size(),CoordType(0,0,0));
+//        //                DefD2.resize(mesh.face.size(),CoordType(0,0,0));
+
+//        //                for (int i=0;i<mesh.face.size();i++)
+//        //                {
+//        //                    for (int j=0;j<3;j++)
+//        //                    {
+//        //                        DefD1[i][j]=D1_deformed(i,j);
+//        //                        DefD2[i][j]=D2_deformed(i,j);
+//        //                    }
+//        //                }
+
+//        Eigen::MatrixXd XField_deformed;
+//        igl::frame_to_cross_field(V_deformed,F,D1_deformed,D2_deformed,XField_deformed);
+
+
+//        //move to deformed position
+//        for (int i = 0; i < VN(); i++)
+//            for (int j = 0; j < 3; j++)
+//                vert[i].P().V(j)=V_deformed(i,j);
+
+//        //save the deformed cross field
+//        for (int i=0;i<face.size();i++)
+//        {
+//            for (int j=0;j<3;j++)
+//                face[i].PD1().V(j)=XField_deformed(i,j);
+
+//            face[i].PD2()=face[i].N()^face[i].PD1();
+
+//            face[i].PD1().Normalize();
+//            face[i].PD2().Normalize();
+//        }
+
+//        vcg::tri::UpdateNormal<MeshType>::PerFaceNormalized(*this);
+//        //        MoveMeshToDeformedPos();
+//        //        vcg::tri::UpdateNormal<MeshType>::PerFaceNormalized(mesh);
+
+//        //        DefXD1.clear();
+//        //        DefXD2.clear();
+//        //        DefXD1.resize(mesh.face.size(),CoordType(0,0,0));
+//        //        DefXD2.resize(mesh.face.size(),CoordType(0,0,0));
+//        //        for (int i=0;i<mesh.face.size();i++)
+//        //        {
+//        //            for (int j=0;j<3;j++)
+//        //                DefXD1[i][j]=XField_deformed(i,j);
+
+//        //            DefXD2[i]=mesh.face[i].N()^DefXD1[i];
+//        //        }
+
+//        //        MoveMeshToRestPos();
+//        //        vcg::tri::UpdateNormal<MeshType>::PerFaceNormalized(mesh);
+
+
+//        //        ScaleTranslateDeformedPos();
+//    }
+
+    void GetMinMaxPercentile(std::vector<ScalarType> &Values,
+                             ScalarType &minV,ScalarType &maxV,
+                             ScalarType percVal=0.1)
+    {
+        std::vector<ScalarType> SortValues=Values;
+        std::sort(SortValues.begin(),SortValues.end());
+
+        std::cout<<"Min Val:"<<SortValues[0]<<std::endl;
+        std::cout<<"Max Val:"<<SortValues.back()<<std::endl;
+
+        int minVIdx=floor(SortValues.size()*percVal+0.5);
+        int maxVIdx=floor(SortValues.size()*(1-percVal)+0.5);
+
+        std::cout<<"Min IDx:"<<minVIdx<<std::endl;
+        std::cout<<"Max IDx:"<<maxVIdx<<std::endl;
+
+        minVIdx=std::max(minVIdx,0);
+        maxVIdx=std::min(maxVIdx,(int)SortValues.size()-1);
+
+        minV=SortValues[minVIdx];
+        maxV=SortValues[maxVIdx];
+    }
+
+    void ClampVal(std::vector<ScalarType> &Values,
+                  const ScalarType &minV,
+                  const ScalarType &maxV)
+    {
+        for (size_t i=0;i<Values.size();i++)
+        {
+            Values[i]=std::max(Values[i],minV);
+            Values[i]=std::min(Values[i],maxV);
+        }
+    }
+
+    void RemapVal(std::vector<ScalarType> &Values,
+                  const ScalarType &minV,
+                  const ScalarType &maxV,
+                  const ScalarType &minRatio,
+                  const ScalarType &maxRatio)
+    {
+        for (size_t i=0;i<Values.size();i++)
+        {
+            Values[i]= ((Values[i] - minV) / (maxV - minV)) *
+                        (maxRatio - minRatio) + minRatio;
+        }
+    }
+
+    void InvertVal(std::vector<ScalarType> &Values,
+                  const ScalarType &minV,
+                  const ScalarType &maxV)
+    {
+        for (size_t i=0;i<Values.size();i++)
+        {
+            ScalarType Ratio=(Values[i] - minV)/(maxV-minV);
+            assert(Ratio>=0);
+            assert(Ratio<=1);
+            Ratio=1-Ratio;
+            Values[i]= minV+ Ratio *(maxV-minV);
+        }
+    }
+
+    //    void InterpNorm(CoordType &Dir,
+    //                    const ScalarType &minV,
+    //                    const ScalarType &maxV,
+    //                    const ScalarType &multiplier)
+    //    {
+    //        //        ScalarType N=Dir.Norm();
+    //        //        assert(Dir.Norm()>=minV);
+    //        //        assert(Dir.Norm()<=maxV);
+    //        assert(multiplier>1);
+
+    //        ScalarType L0=1;//(ScalarType)1/multiplier;
+    //        ScalarType L1=multiplier;
+    //        ScalarType value=Dir.Norm();
+
+    //        // Calculate the ratio between the input value and the value range
+    //        ScalarType ratio = (value - minV) / (maxV - minV);
+
+    //        // Map the ratio to the output range
+    //        ScalarType mappedValue = L0 + ratio * (L1 - L0);
+
+    //        Dir.Normalize();
+    //        Dir*=mappedValue;
+    //    }
+    void DeformToIsotropicFrame(const ScalarType &lambda_smooth=0.1,
+                                const ScalarType &maxDensRatio=4,
+                                const ScalarType &maxAnisRatio=4,
+                                const ScalarType &filterPerc=0.01,
+                                const ScalarType &DeltaVar=0.1)
+    {
+        // create eigen matrix of vertices
+        Eigen::MatrixXd V(VN(), 3);
+        Eigen::MatrixXd V_deformed(VN(), 3);
+
+        // create eigen matrix of faces
+        Eigen::MatrixXi F(FN(), 3);
+
+
+        MoveToRestPos();
+
+        //filter the outlayers
+        std::vector<ScalarType> Dens;
+        std::vector<ScalarType> Anisotr;
+
+
+        for (int i = 0; i < face.size(); i++)
+        {
+
+            ScalarType N1=fabs(face[i].K1());
+            ScalarType N2=fabs(face[i].K2());
+
+            Dens.push_back(std::max(N1,N2));
+
+            ScalarType Anis=std::max(N1,N2)/std::min(N1,N2);
+            Anisotr.push_back(Anis);
+            if (Anis!=1)
+                std::cout<<"Anis:"<<Anis<<std::endl;
+        }
+
+        ScalarType minD,maxD;
+        ScalarType minA,maxA;
+        GetMinMaxPercentile(Dens,minD,maxD,filterPerc);
+        GetMinMaxPercentile(Anisotr,minA,maxA,filterPerc);
+
+        //then see if need to scale or not
+        bool scaleA=((maxA-1)>DeltaVar);
+        bool scaleD=((maxD-minD)/maxD>DeltaVar);
+
+        std::cout<<"scaleA:"<<scaleA<<std::endl;
+        std::cout<<"scaleD:"<<scaleD<<std::endl;
+
+        scaleA&=(maxAnisRatio>1);
+        scaleD&=(maxDensRatio>1);
+
+        std::cout<<"scaleA:"<<scaleA<<std::endl;
+        std::cout<<"scaleD:"<<scaleD<<std::endl;
+
+        //then remove outlayers and remap values
+        assert(Dens.size()==Anisotr.size());
+        assert(Dens.size()==face.size());
+
+        ClampVal(Dens,minD,maxD);
+        ClampVal(Anisotr,minA,maxA);
+
+
+        if (scaleD)
+        {
+            RemapVal(Dens,minD,maxD,1,maxDensRatio);
+            //invert mode dense more stress
+            InvertVal(Dens,1,maxDensRatio);
+        }
+        else
+            Dens=std::vector<ScalarType>(face.size(),1);
+
+        if (scaleA)
+            RemapVal(Anisotr,minA,maxA,1,maxAnisRatio);
+        else
+            Anisotr=std::vector<ScalarType>(face.size(),1);
+
+        //then find the values scale
+        std::vector<CoordType> PD1;
+        std::vector<CoordType> PD2;
+        for (int i = 0; i < face.size(); i++)
+        {
+            CoordType CurrPD1=face[i].cPD1();
+            CoordType CurrPD2=face[i].cPD2();
+            bool do_swap=(CurrPD1.Norm()<CurrPD2.Norm());
+
+            CurrPD1.Normalize();
+            CurrPD2.Normalize();
+            ScalarType targetD=Dens[i];
+            ScalarType targetA=Anisotr[i];
+            CurrPD1*=targetD;
+            CurrPD2*=targetD;
+
+            if (do_swap)
+                CurrPD2*=targetA;
+            else
+                CurrPD1*=targetA;
+
+            PD1.push_back(CurrPD1);
+            PD2.push_back(CurrPD2);
+        }
+
+        //then copy the mesh to vector product
+        MeshToEigen(V,F);
+        Eigen::MatrixXd D1(FN(), 3);
+        Eigen::MatrixXd D2(FN(), 3);
+        for (int i = 0; i < FN(); i++)
+        {
+            for (int j = 0; j < 3; j++)
+            {
+                ///set the
+                D1(i,j)= PD1[i][j];
+                D2(i,j)= PD2[i][j];
+            }
+        }
+
+        Eigen::MatrixXd D1_deformed(FN(), 3);
+        Eigen::MatrixXd D2_deformed(FN(), 3);
+        igl::frame_field_deformer(V,F,D1,D2,V_deformed,D1_deformed,D2_deformed,50,lambda_smooth);//,num_ite,Lambda);
+
+        Eigen::MatrixXd XField_deformed;
+        igl::frame_to_cross_field(V_deformed,F,D1_deformed,D2_deformed,XField_deformed);
+
+
+        //move to deformed position
+        for (int i = 0; i < VN(); i++)
+            for (int j = 0; j < 3; j++)
+                vert[i].P().V(j)=V_deformed(i,j);
+
+        //save the deformed cross field
+        for (int i=0;i<face.size();i++)
+        {
+            for (int j=0;j<3;j++)
+                face[i].PD1().V(j)=XField_deformed(i,j);
+
+            face[i].PD2()=face[i].N()^face[i].PD1();
+
+            face[i].PD1().Normalize();
+            face[i].PD2().Normalize();
+        }
+
+        vcg::tri::UpdateNormal<MeshType>::PerFaceNormalized(*this);
+
+    }
+
     void SampleFacesV(size_t num_samples=5000)
     {
         std::vector<CoordType> poissonSamples;
@@ -1910,11 +2441,11 @@ public:
         std::cout<<"Sampled:"<<poissonSamples.size()<<"samples"<<std::endl;
         for (size_t i=0;i<poissonSamples.size();i++)
         {
-           CoordType closePt;
-           ScalarType minD;
-           FaceType *f=vcg::tri::GetClosestFaceBase(*this,MyGrid,poissonSamples[i],bbox.Diag(),minD,closePt);
-           assert(f!=NULL);
-           f->SetV();
+            CoordType closePt;
+            ScalarType minD;
+            FaceType *f=vcg::tri::GetClosestFaceBase(*this,MyGrid,poissonSamples[i],bbox.Diag(),minD,closePt);
+            assert(f!=NULL);
+            f->SetV();
         }
     }
 };

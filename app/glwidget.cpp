@@ -62,6 +62,12 @@
 #include <vcg/complex/algorithms/dual_meshing.h>
 #include <vcg/complex/algorithms/polygonal_algorithms.h>
 #include "quad_refiner.h"
+#include <voronoi.h>
+
+//#include <vcg/complex/algorithms/voronoi_remesher.h>
+//#include <vcg/complex/algorithms/dual_meshing.h>
+//#include <vcg/complex/algorithms/polygon_support.h>
+//#include <vcg/complex/algorithms/polygonal_algorithms.h>
 
 std::string pathM="";
 std::string pathF="";
@@ -127,6 +133,11 @@ ScalarType miqAnisotropy=0.2;
 
 std::set<std::pair<size_t,size_t> > SelEdges;
 
+
+ScalarType lambda_smooth=0.1;
+ScalarType maxDensRatio=4;
+ScalarType maxAniRatio=4;
+
 void DoCollapseSmall()
 {
     vcg::PolygonalAlgorithm<PMesh>::CollapseBorderSmallEdges(quad_mesh,smallVal);
@@ -158,6 +169,269 @@ void TW_CALL RefineBigFaces(void *)
 }
 
 
+void TW_CALL VoroRemesh(void *)
+{  
+    bool UseDef=(maxDensRatio>1)||(maxAniRatio>1);
+    VoroRemesh<MyTriMesh,PMesh>(tri_mesh,MiqP.gradient,UseDef,quad_mesh,50,6);
+    quadrangulated=true;
+    quad_mesh.UpdateAttributes();
+    tri_mesh.MoveToRestPos();
+    tri_mesh.UpdateDataStructures();
+    tri_mesh.MakeFieldTangentToSurface();
+
+//    //METODO 1
+
+//    MyTriMesh baseMesh;
+//    vcg::tri::Append<MyTriMesh,MyTriMesh>::Mesh(baseMesh,tri_mesh);
+//    baseMesh.UpdateDataStructures();
+
+//    vcg::tri::VoronoiProcessingParameter vpp;
+//    vpp.refinementRatio=6;
+//    vcg::tri::SurfaceSampling<MyTriMesh,vcg::tri::TrivialSampler<MyTriMesh> >::PoissonDiskParam pp;
+//    float radius = 2*baseMesh.bbox.Diag()/MiqP.gradient;//vcg::tri::SurfaceSampling<MyTriMesh,tri::TrivialSampler<MyTriMesh> >::ComputePoissonDiskRadius(baseMesh,sampleNum);
+//    vcg::tri::VoronoiProcessing<MyTriMesh>::PreprocessForVoronoi(baseMesh,radius,vpp);
+//    baseMesh.UpdateDataStructures();
+
+//    if ((maxDensRatio>1)||(maxAniRatio>1))
+//    {
+//        vcg::GridStaticPtr<MyTriMesh::FaceType,MyTriMesh::ScalarType> Gr;
+//        Gr.Set(tri_mesh.face.begin(),tri_mesh.face.end());
+//        for (size_t i=0;i<baseMesh.vert.size();i++)
+//        {
+//            MyTriMesh::ScalarType minD;
+//            MyTriMesh::CoordType closP,normF,IP;
+//            MyTriMesh::FaceType *f=vcg::tri::GetClosestFaceBase(tri_mesh,Gr,baseMesh.vert[i].P(),
+//                                                                tri_mesh.bbox.Diag(),minD,closP,
+//                                                                normF,IP);
+//            assert(f!=NULL);
+//            CoordType RPos0=f->V(0)->RPos;
+//            CoordType RPos1=f->V(1)->RPos;
+//            CoordType RPos2=f->V(2)->RPos;
+//            CoordType InterpRPos=RPos0*IP.X()+RPos1*IP.Y()+RPos2*IP.Z();
+//            baseMesh.vert[i].RPos=InterpRPos;
+//        }
+//    }
+
+//    //vcg::tri::io::ExporterPLY<MyTriMesh>::Save(baseMesh,"remeshed_voro.ply");
+//    // -- Build a sampling with just corners (Poisson filtered)
+//    MyTriMesh poissonCornerMesh;
+//    std::vector<MyTriMesh::CoordType> sampleVec;
+//    vcg::tri::TrivialSampler<MyTriMesh> mps(sampleVec);
+//    vcg::tri::SurfaceSampling<MyTriMesh,vcg::tri::TrivialSampler<MyTriMesh> >::VertexBorderCorner(baseMesh,mps,vcg::math::ToRad(150.f));
+//    vcg::tri::BuildMeshFromCoordVector(poissonCornerMesh,sampleVec);
+//    //std::cout<<"Sample Num:"<<sampleVec.size()<<std::endl;
+//    //vcg::tri::io::ExporterPLY<MyTriMesh>::Save(poissonCornerMesh,"cornerMesh.ply");
+
+
+//    //        sampleVec.clear();
+//    MyTriMesh borderMesh,poissonBorderMesh;
+
+
+//    //    float radius = tri_mesh.bbox.Diag()/MiqP.gradient;
+//    //    vcg::tri::SurfaceSampling<MyTriMesh,vcg::tri::TrivialSampler<MyTriMesh> >::PoissonDiskPruning(mps, poissonCornerMesh, radius, pp);
+//    //    vcg::tri::BuildMeshFromCoordVector(poissonCornerMesh,sampleVec);
+//    //    vcg::tri::io::ExporterPLY<MyTriMesh>::Save(poissonCornerMesh,"poissonCornerMesh.ply");
+
+//    // Now save the corner as Fixed Seeds for later...
+//    std::vector<MyTriMesh::VertexType *> fixedSeedVec;
+//    vcg::tri::VoronoiProcessing<MyTriMesh>::SeedToVertexConversion(baseMesh,sampleVec,fixedSeedVec);
+//    vcg::tri::VoronoiProcessing<MyTriMesh, vcg::tri::EuclideanDistance<MyTriMesh> >::MarkVertexVectorAsFixed(baseMesh,fixedSeedVec);
+//    vpp.preserveFixedSeed=true;
+//    //}
+
+//    // -- Build a sampling with points on the border
+//    sampleVec.clear();
+//    vcg::tri::SurfaceSampling<MyTriMesh,vcg::tri::TrivialSampler<MyTriMesh> >::VertexBorder(baseMesh,mps);
+//    vcg::tri::BuildMeshFromCoordVector(borderMesh,sampleVec);
+//    //vcg::tri::io::ExporterPLY<MyTriMesh>::Save(borderMesh,"borderMesh.ply");
+
+//    // -- and then prune the border sampling with poisson strategy using the precomputed corner vertexes.
+//    pp.preGenMesh = &poissonCornerMesh;
+//    pp.preGenFlag=true;
+//    sampleVec.clear();
+//    vcg::tri::SurfaceSampling<MyTriMesh,vcg::tri::TrivialSampler<MyTriMesh> >::PoissonDiskPruning(mps, borderMesh, radius*0.8f, pp);
+//    vcg::tri::BuildMeshFromCoordVector(poissonBorderMesh,sampleVec);
+//    //vcg::tri::io::ExporterPLY<MyTriMesh>::Save(poissonBorderMesh,"PoissonEdgeMesh.ply");
+
+//    // -- Build the montercarlo sampling of the surface
+//    MyTriMesh MontecarloSurfaceMesh;
+//    sampleVec.clear();
+//    vcg::tri::SurfaceSampling<MyTriMesh,vcg::tri::TrivialSampler<MyTriMesh> >::Montecarlo(baseMesh,mps,50000);
+//    vcg::tri::BuildMeshFromCoordVector(MontecarloSurfaceMesh,sampleVec);
+//    //vcg::tri::io::ExporterPLY<MyTriMesh>::Save(MontecarloSurfaceMesh,"MontecarloSurfaceMesh.ply");
+
+//    // -- Prune the montecarlo sampling with poisson strategy using the precomputed vertexes on the border.
+//    pp.preGenMesh = &poissonBorderMesh;
+//    pp.preGenFlag=true;
+//    sampleVec.clear();
+//    vcg::tri::SurfaceSampling<MyTriMesh,vcg::tri::TrivialSampler<MyTriMesh> >::PoissonDiskPruning(mps, MontecarloSurfaceMesh, radius, pp);
+//    MyTriMesh PoissonMesh;
+////    vcg::tri::BuildMeshFromCoordVector(PoissonMesh,sampleVec);
+////    vcg::tri::io::ExporterPLY<MyTriMesh>::Save(PoissonMesh,"PoissonMesh.ply");
+
+//    std::vector<MyTriMesh::VertexType *> seedVec;
+//    vcg::tri::VoronoiProcessing<MyTriMesh>::SeedToVertexConversion(baseMesh,sampleVec,seedVec);
+
+//    // Select all the vertexes on the border to define a constrained domain.
+//    // In our case we select the border vertexes to make sure that the seeds on the border
+//    // relax themselves remaining on the border
+//    for(size_t i=0;i<baseMesh.vert.size();++i){
+//        if(baseMesh.vert[i].IsB())
+//            baseMesh.vert[i].SetS();
+//    }
+
+//    //  vpp.deleteUnreachedRegionFlag=true;
+//    vpp.deleteUnreachedRegionFlag=false;
+//    vpp.triangulateRegion = false;
+//    vpp.geodesicRelaxFlag=false;
+//    vpp.constrainSelectedSeed=true;
+
+//    vcg::tri::EuclideanDistance<MyTriMesh> dd;
+//    int t0=clock();
+//    int iterNum=1000;
+//    //vpp.
+//    vpp.collapseShortEdge=true;
+//    vpp.collapseShortEdgePerc=0.05;
+
+//    // And now, at last, the relaxing procedure!
+//    int actualIter = vcg::tri::VoronoiProcessing<MyTriMesh, vcg::tri::EuclideanDistance<MyTriMesh> >::VoronoiRelaxing(baseMesh, seedVec, iterNum, dd, vpp);
+//    std::cout<<"Performed "<<actualIter<<"iterations"<<std::endl;
+//    //        MyTriMesh PoissonRelaxed;
+//    //        std::vector<MyTriMesh::CoordType> relaxedSample;
+//    //        for (size_t i=0;i<seedVec.size();i++)
+//    //            relaxedSample.push_back(seedVec[i]->P());
+
+//    //        vcg::tri::BuildMeshFromCoordVector(PoissonRelaxed,relaxedSample);
+//    //        vcg::tri::io::ExporterPLY<MyTriMesh>::Save(PoissonRelaxed,"RelaxedSamples.ply");
+//    //        //MyTriMesh PoissonMesh;
+
+//    //        //    int t1=clock();
+
+//    MyTriMesh voroMesh, voroPoly, delaMesh;
+//    // Get the result in some pleasant form converting it to a real voronoi diagram.
+//    if(vcg::tri::VoronoiProcessing<MyTriMesh>::CheckVoronoiTopology(baseMesh,seedVec))
+//    {
+//        baseMesh.MoveToRestPos();
+
+//        vcg::tri::VoronoiProcessing<MyTriMesh>::ConvertVoronoiDiagramToMesh(baseMesh,voroMesh,voroPoly,seedVec, vpp);
+//        //            vcg::tri::io::ExporterPLY<MyTriMesh>::Save(voroMesh,"voroPoly.ply",vcg::tri::io::Mask::IOM_ALL);
+//        //            vcg::tri::io::ExporterPLY<MyTriMesh>::Save(voroPoly,"voroEdge.ply",vcg::tri::io::Mask::IOM_ALL);
+//        vcg::tri::Clean<MyTriMesh>::RemoveUnreferencedVertex(voroMesh);
+//        vcg::tri::Allocator<MyTriMesh>::CompactEveryVector(voroMesh);
+//        voroMesh.UpdateDataStructures();
+//        vcg::tri::PolygonSupport<MyTriMesh,PMesh>::ImportFromTriMesh( quad_mesh,voroMesh);
+//        quadrangulated=true;
+//        quad_mesh.UpdateAttributes();
+//                tri_mesh.MoveToRestPos();
+//                tri_mesh.UpdateDataStructures();
+//                tri_mesh.MakeFieldTangentToSurface();
+//    }
+
+//    vcg::PolygonalAlgorithm<PMesh>::SmoothReprojectPCA(quad_mesh);
+
+    //        //BRING BACK TO REST SHAPE
+    //        if ((maxDensRatio>1)||(maxAniRatio>1))
+    //        {
+    //            vcg::GridStaticPtr<MyTriMesh::FaceType,MyTriMesh::ScalarType> Gr;
+    //            Gr.Set(tri_mesh.face.begin(),tri_mesh.face.end());
+    //            for (size_t i=0;i<quad_mesh.vert.size();i++)
+    //            {
+    //                MyTriMesh::ScalarType minD;
+    //                MyTriMesh::CoordType closP,normF,IP;
+    //                MyTriMesh::FaceType *f=vcg::tri::GetClosestFaceBase(tri_mesh,Gr,quad_mesh.vert[i].P(),tri_mesh.bbox.Diag(),minD,closP,normF,IP);
+    //                assert(f!=NULL);
+    //                CoordType RPos0=f->V(0)->RPos;
+    //                CoordType RPos1=f->V(1)->RPos;
+    //                CoordType RPos2=f->V(2)->RPos;
+    //                CoordType InterpRPos=RPos0*IP.X()+RPos1*IP.Y()+RPos2*IP.Z();
+    //                quad_mesh.vert[i].P()=InterpRPos;
+    //            }
+    //        }
+
+
+    //        tri_mesh.MoveToRestPos();
+    //        tri_mesh.UpdateDataStructures();
+    //        tri_mesh.MakeFieldTangentToSurface();
+
+    //METODO 2
+
+    //vcg::1<MyTriMesh>::
+
+    //    float samplingRadius = tri_mesh.bbox.Diag()/MiqP.gradient;
+    //    auto remeshed = vcg::tri::Remesher<MyTriMesh>::Remesh(tri_mesh, samplingRadius, 70.0);
+    //    tri_mesh.UpdateDataStructures();
+    //    if ((maxDensRatio>1)||(maxAniRatio>1))
+    //    {
+    //        vcg::GridStaticPtr<MyTriMesh::FaceType,MyTriMesh::ScalarType> Gr;
+    //        Gr.Set(tri_mesh.face.begin(),tri_mesh.face.end());
+    //        for (size_t i=0;i<remeshed->vert.size();i++)
+    //        {
+    //            MyTriMesh::ScalarType minD;
+    //            MyTriMesh::CoordType closP,normF,IP;
+    //            MyTriMesh::FaceType *f=vcg::tri::GetClosestFaceBase(tri_mesh,Gr,remeshed->vert[i].P(),tri_mesh.bbox.Diag(),minD,closP,normF,IP);
+    //            assert(f!=NULL);
+    //            CoordType RPos0=f->V(0)->RPos;
+    //            CoordType RPos1=f->V(1)->RPos;
+    //            CoordType RPos2=f->V(2)->RPos;
+    //            CoordType InterpRPos=RPos0*IP.X()+RPos1*IP.Y()+RPos2*IP.Z();
+    //            remeshed->vert[i].P()=InterpRPos;
+    //        }
+    //    }
+    //    PMesh primal;
+    //    vcg::tri::Append<PMesh,MyTriMesh>::Mesh(primal,*remeshed);
+    ////    //vcg::tri::io::ExporterOBJ<PMesh>::Save(primal,"primal.obj",vcg::tri::io::Mask::IOM_BITPOLYGONAL);
+    //    primal.UpdateAttributes();
+    //    vcg::tri::DualMeshing<PMesh>::MakeDual(primal,quad_mesh,false);
+    //    tri_mesh.MoveToRestPos();
+    //    tri_mesh.UpdateDataStructures();
+    //    tri_mesh.MakeFieldTangentToSurface();
+
+    //    quadrangulated=true;
+    //    quad_mesh.UpdateAttributes();
+
+    //    //METODO 3
+    //    MyTriMesh remeshed;
+    //    vcg::tri::Append<MyTriMesh,MyTriMesh>::Mesh(remeshed,tri_mesh);
+    //    vcg::tri::IsotropicRemeshing<MyTriMesh>::Params pp;
+    //    pp.iter=100;
+    //    pp.SetTargetLen(tri_mesh.bbox.Diag()/MiqP.gradient);
+    //    remeshed.UpdateDataStructures();
+    //    vcg::tri::IsotropicRemeshing<MyTriMesh>::Do(remeshed,pp);
+
+    //    PMesh primal;
+    //    vcg::tri::Append<PMesh,MyTriMesh>::Mesh(primal,remeshed);
+    //    //    //vcg::tri::io::ExporterOBJ<PMesh>::Save(primal,"primal.obj",vcg::tri::io::Mask::IOM_BITPOLYGONAL);
+    //    primal.UpdateAttributes();
+    //    vcg::tri::DualMeshing<PMesh>::MakeDual(primal,quad_mesh,false);
+
+
+    //    if ((maxDensRatio>1)||(maxAniRatio>1))
+    //    {
+    //        vcg::GridStaticPtr<MyTriMesh::FaceType,MyTriMesh::ScalarType> Gr;
+    //        Gr.Set(tri_mesh.face.begin(),tri_mesh.face.end());
+    //        for (size_t i=0;i<quad_mesh.vert.size();i++)
+    //        {
+    //            MyTriMesh::ScalarType minD;
+    //            MyTriMesh::CoordType closP,normF,IP;
+    //            MyTriMesh::FaceType *f=vcg::tri::GetClosestFaceBase(tri_mesh,Gr,quad_mesh.vert[i].P(),tri_mesh.bbox.Diag(),minD,closP,normF,IP);
+    //            assert(f!=NULL);
+    //            CoordType RPos0=f->V(0)->RPos;
+    //            CoordType RPos1=f->V(1)->RPos;
+    //            CoordType RPos2=f->V(2)->RPos;
+    //            CoordType InterpRPos=RPos0*IP.X()+RPos1*IP.Y()+RPos2*IP.Z();
+    //            quad_mesh.vert[i].P()=InterpRPos;
+    //        }
+    //    }
+
+    //    quadrangulated=true;
+    //    quad_mesh.UpdateAttributes();
+    //    tri_mesh.MoveToRestPos();
+    //    tri_mesh.UpdateDataStructures();
+    //    tri_mesh.MakeFieldTangentToSurface();
+
+}
+
+
 void DoMiqQuadrangulate()
 {
     tri_mesh.NormalizeMagnitudo();
@@ -182,6 +456,10 @@ void DoMiqQuadrangulate()
     vcg::tri::Quadrangulator<MyTriMesh,PMesh> Quadr;
 
     std::cout<<"Quadrangulating"<<std::endl;
+    tri_mesh.MoveToRestPos();
+    tri_mesh.UpdateDataStructures();
+    tri_mesh.MakeFieldTangentToSurface();
+
     MyTriMesh splitted_mesh;
     vcg::tri::Append<MyTriMesh,MyTriMesh>::Mesh(splitted_mesh,tri_mesh);
     std::vector< std::vector< short int> > AxisUV;
@@ -301,14 +579,25 @@ void TW_CALL InitAnisotropy(void *)
     vcg::tri::UpdateColor<MyTriMesh>::PerFaceQualityGray(tri_mesh);
 }
 
+void DoDeformByFrameField()
+{
+    tri_mesh.DeformToIsotropicFrame(lambda_smooth,maxDensRatio,maxAniRatio);
+    tri_mesh.UpdateDataStructures();
+    //   vcg::tri::UpdateColor<MyTriMesh>::PerFaceQualityGray(tri_mesh);
+}
+
 void TW_CALL SmoothFieldByAnisotropy(void *)
 {
+    if ((maxDensRatio>1)||(maxAniRatio>1))
+        DoDeformByFrameField();
+
     //save the norm
     tri_mesh.NormalizeMagnitudo();
 
     //    //set quality as importance
     //    for (size_t i=0;i<tri_mesh.face.size();i++)
     //        tri_mesh.face[i].Q()=1-tri_mesh.face[i].MaskVal;
+
 
     if (alignFieldBorder)
     {
@@ -318,7 +607,16 @@ void TW_CALL SmoothFieldByAnisotropy(void *)
     vcg::tri::CrossField<MyTriMesh>::UpdateSingularByCross(tri_mesh);
 
     tri_mesh.ScaleMagnitudo();
+
 }
+
+//void TW_CALL DeformByFrameField(void *)
+//{
+//    tri_mesh.DeformToIsotropicFrame(lambda_smooth,maxDensRatio,maxAniRatio);
+//    tri_mesh.UpdateDataStructures();
+//    vcg::tri::UpdateColor<MyTriMesh>::PerFaceQualityGray(tri_mesh);
+
+//}
 
 std::string GetProjectName()
 {
@@ -336,23 +634,23 @@ std::string GetProjectName()
     }
     std::string gradientName=std::to_string((int)MiqP.gradient);
     return(projM+std::string("_")+FieldDetails+
-            std::string("_")+gradientName);
+           std::string("_")+gradientName);
 }
 
 
 void DoSaveFieldData()
 {
-//    std::string projM=pathM;
-//    size_t indexExt=projM.find_last_of(".");
-//    projM=projM.substr(0,indexExt);
+    //    std::string projM=pathM;
+    //    size_t indexExt=projM.find_last_of(".");
+    //    projM=projM.substr(0,indexExt);
 
-//    std::string FieldDetails=std::string("_curv");
-//    if (pathF!=std::string(""))
-//    {
-//        std::string FieldDetails=pathF;
-//        size_t indexExt=FieldDetails.find_last_of(".");
-//        FieldDetails=FieldDetails.substr(0,indexExt);
-//    }
+    //    std::string FieldDetails=std::string("_curv");
+    //    if (pathF!=std::string(""))
+    //    {
+    //        std::string FieldDetails=pathF;
+    //        size_t indexExt=FieldDetails.find_last_of(".");
+    //        FieldDetails=FieldDetails.substr(0,indexExt);
+    //    }
 
     //std::string meshName=projM+FieldDetails+std::string("_rem.obj");
     //std::string fieldName=projM+FieldDetails+std::string("_rem.rosy");
@@ -377,18 +675,18 @@ void TW_CALL SaveFieldData(void *)
 
 void DoSaveSetup()
 {
-//    std::string projM=pathM;
-//    size_t indexExt=projM.find_last_of(".");
-//    projM=projM.substr(0,indexExt);
+    //    std::string projM=pathM;
+    //    size_t indexExt=projM.find_last_of(".");
+    //    projM=projM.substr(0,indexExt);
 
-//    std::string FieldDetails=std::string("_curv");
-//    if (pathF!=std::string(""))
-//    {
-//        std::string FieldDetails=pathF;
-//        size_t indexExt=FieldDetails.find_last_of(".");
-//        FieldDetails=FieldDetails.substr(0,indexExt);
-//    }
-//    std::string setupName=projM+FieldDetails+std::string("_setup.txt");
+    //    std::string FieldDetails=std::string("_curv");
+    //    if (pathF!=std::string(""))
+    //    {
+    //        std::string FieldDetails=pathF;
+    //        size_t indexExt=FieldDetails.find_last_of(".");
+    //        FieldDetails=FieldDetails.substr(0,indexExt);
+    //    }
+    //    std::string setupName=projM+FieldDetails+std::string("_setup.txt");
     std::string setupName=GetProjectName()+std::string("_setup.txt");
     FILE *f=fopen(setupName.c_str(),"wt");
     assert(f!=NULL);
@@ -517,24 +815,24 @@ void DoBatchComputation()
     DoMiqQuadrangulate();
     if (smallVal>0)
         DoCollapseSmall();
-//    //save field
-//    DoSaveFieldData();
-//    //save quad
-//    DoSaveQuad();
-//    //save setup
-//    DoSaveSetup();
-//    //close the execution
-//    exit(0);
+    //    //save field
+    //    DoSaveFieldData();
+    //    //save quad
+    //    DoSaveQuad();
+    //    //save setup
+    //    DoSaveSetup();
+    //    //close the execution
+    //    exit(0);
 }
 
 void TW_CALL ColorUniformly(void *)
 {
-   vcg::tri::UpdateColor<MyTriMesh>::PerFaceConstant(tri_mesh);
+    vcg::tri::UpdateColor<MyTriMesh>::PerFaceConstant(tri_mesh);
 }
 
 void TW_CALL BatchComputation(void *)
 {
-   DoBatchComputation();
+    DoBatchComputation();
 }
 
 void InitFieldBar(QWidget *w)
@@ -564,8 +862,8 @@ void InitFieldBar(QWidget *w)
     //TwAddButton(barQuad,"SetSharp",InitSharpFeatures,0,"label='InitSharp'");
     //TwAddSeparator(barQuad,NULL,NULL);
 
-//    TwAddButton(barQuad,"AutoRemesh",AutoRemesh,0,"label='AutoRemesh'");
-//    TwAddButton(barQuad,"Refine",RefineIfNeeded,0,"label='Refine if needed'");
+    //    TwAddButton(barQuad,"AutoRemesh",AutoRemesh,0,"label='AutoRemesh'");
+    //    TwAddButton(barQuad,"Refine",RefineIfNeeded,0,"label='Refine if needed'");
 
     TwAddSeparator(barQuad,NULL,NULL);
     TwAddVarRW(barQuad,"Alpha",TW_TYPE_DOUBLE, &FieldParam.alpha_curv," label='Alpha Curvature'");
@@ -587,25 +885,34 @@ void InitFieldBar(QWidget *w)
 
     TwAddVarRW(barQuad,"AlignB",TW_TYPE_BOOLCPP, &alignFieldBorder," label='Align Borders'");
     TwAddVarRW(barQuad,"GlobSmooth",TW_TYPE_DOUBLE, &SmoothGamma," label='Global Smooth Factor'");
+
+    TwAddVarRW(barQuad,"MaxDensRatio",TW_TYPE_DOUBLE, &maxDensRatio," label='Density Variance'");
+    TwAddVarRW(barQuad,"MaxAnisRatio",TW_TYPE_DOUBLE, &maxAniRatio," label='Anisotropy Variance'");
+    TwAddVarRW(barQuad,"SmoothDeform",TW_TYPE_DOUBLE, &lambda_smooth," label='Smooth Deformr'");
+
     TwAddButton(barQuad,"Smooth By Anisotropy",SmoothFieldByAnisotropy,0,"label='Smooth By Anisotropy'");
+
+    //TwAddButton(barQuad,"DeformField",DeformByFrameField,0,"label='DeformByFrameField'");
 
     TwAddSeparator(barQuad,NULL,NULL);
     TwAddButton(barQuad,"SaveFieldData",SaveFieldData,0,"label='Save Field Sharp Remesh Data'");
 
     TwAddSeparator(barQuad,NULL,NULL);
 
-//    TwAddVarRW(barQuad,"Corner Degrees",TW_TYPE_DOUBLE, &CornerDegree," label='Corner Degree'");
-//    TwAddButton(barQuad,"Select Corner",SelectCorners,0,"label='Select Corners'");
+    //    TwAddVarRW(barQuad,"Corner Degrees",TW_TYPE_DOUBLE, &CornerDegree," label='Corner Degree'");
+    //    TwAddButton(barQuad,"Select Corner",SelectCorners,0,"label='Select Corners'");
 
     TwAddVarRW(barQuad,"Gradient",TW_TYPE_DOUBLE, &MiqP.gradient," label='Gradient'");
     TwAddVarRW(barQuad,"Direct Round",TW_TYPE_BOOLCPP, &MiqP.directRound," label='Direct Round'");
     TwAddVarRW(barQuad,"Round Singularities",TW_TYPE_BOOLCPP, &MiqP.round_singularities," label='Round Singularities'");
     TwAddVarRW(barQuad,"IsotropyVsAlign",TW_TYPE_DOUBLE, &miqAnisotropy," label='Isotropy Vs Align'");
-//    TwAddVarRW(barQuad,"Align Sharp",TW_TYPE_BOOLCPP, & MiqP.crease_as_feature," label='Align Sharp'");
+    //    TwAddVarRW(barQuad,"Align Sharp",TW_TYPE_BOOLCPP, & MiqP.crease_as_feature," label='Align Sharp'");
 
     TwAddVarRW(barQuad,"Snap Border",TW_TYPE_BOOLCPP, &snapBorder," label='Snap Border'");
     TwAddButton(barQuad,"Quadrangulate",MiqQuadrangulate,0,"label='Miq Quadrangulate'");
-//    TwAddButton(barQuad,"SplitNonQuad",SplitQuad,0,"label='Split non Quad'");
+    TwAddButton(barQuad,"VoroMesh",VoroRemesh,0,"label='VoroRemesh'");
+
+    //    TwAddButton(barQuad,"SplitNonQuad",SplitQuad,0,"label='Split non Quad'");
 
 
     TwAddVarRW(barQuad,"Ratio",TW_TYPE_DOUBLE, &smallVal," label='Ratio'");
@@ -614,19 +921,19 @@ void InitFieldBar(QWidget *w)
     //    TwAddVarRW(barRem,"DrawTris",TW_TYPE_BOOL8, &drawTris," label='Draw Tris'");
     //    TwAddVarRW(barRem,"DrawHexa",TW_TYPE_BOOL8, &drawHex," label='Draw Hexa'");
 
-//    TwAddVarRW(barQuad,"Optimize Dual",TW_TYPE_BOOL8, &QRef.optimize_for_dual," label='dual Optimize'");
-//    TwAddVarRW(barQuad,"Erode Dilate",TW_TYPE_BOOL8, &QRef.erode_dilate," label='erode Dilate'");
-//    TwAddVarRW(barQuad,"Dualize",TW_TYPE_BOOL8, &QRef.dualize_final," label='dualize'");
-//    TwAddVarRW(barQuad,"Optimize",TW_TYPE_BOOL8, &QRef.final_optimize," label='optimize'");
+    //    TwAddVarRW(barQuad,"Optimize Dual",TW_TYPE_BOOL8, &QRef.optimize_for_dual," label='dual Optimize'");
+    //    TwAddVarRW(barQuad,"Erode Dilate",TW_TYPE_BOOL8, &QRef.erode_dilate," label='erode Dilate'");
+    //    TwAddVarRW(barQuad,"Dualize",TW_TYPE_BOOL8, &QRef.dualize_final," label='dualize'");
+    //    TwAddVarRW(barQuad,"Optimize",TW_TYPE_BOOL8, &QRef.final_optimize," label='optimize'");
 
-//    TwAddButton(barQuad,"RefineBig",RefineBigFaces,0,"label='Refine Big Faces'");
+    //    TwAddButton(barQuad,"RefineBig",RefineBigFaces,0,"label='Refine Big Faces'");
 
     TwAddSeparator(barQuad,NULL,NULL);
     TwAddButton(barQuad,"BatchProcess",BatchComputation,0,"label='BatchProcess'");
     TwAddButton(barQuad,"SaveAll",SaveAllData,0,"label='Save All Data'");
 
     //TwAddButton(barQuad,"SaveSing",SaveSingularities,0,"label='Save Singolarities'");
- //   TwAddButton(barQuad,"SaveAbaqus",SaveAbaqus,0,"label='Save Abaqus Data'");
+    //   TwAddButton(barQuad,"SaveAbaqus",SaveAbaqus,0,"label='Save Abaqus Data'");
     //TwAddButton(barQuad,"SaveSing",SaveSingularities,0,"label='Save Singolarities'");
 
 }
@@ -641,6 +948,9 @@ GLWidget::GLWidget(QWidget *parent)
     hasToPick=false;
     bool AllQuad=false;
     bool Loaded=tri_mesh.LoadTriMesh(pathM,AllQuad);
+
+    tri_mesh.InitRestPos();
+
     if (!Loaded)
     {
         std::cout<<"Error Loading Mesh"<<std::endl;
@@ -685,12 +995,12 @@ GLWidget::GLWidget(QWidget *parent)
             std::cout<<"Max ABS Field Magnitudo "<<MaxFieldVal<<std::endl;
         }
     }
-//    if (pathL!=std::string(""))
-//    {
-//       std::cout<<"Loading Boundary Conditions"<<std::endl;
-//       tri_mesh.LoadBoxBoundaryConditions(pathL);//LoadBoundaryConditions(pathL);
-//       std::cout<<"Done Loading Boundary Conditions"<<std::endl;
-//    }
+    //    if (pathL!=std::string(""))
+    //    {
+    //       std::cout<<"Loading Boundary Conditions"<<std::endl;
+    //       tri_mesh.LoadBoxBoundaryConditions(pathL);//LoadBoundaryConditions(pathL);
+    //       std::cout<<"Done Loading Boundary Conditions"<<std::endl;
+    //    }
 
     MiqP.gradient=DefaultGradient;
     MiqP.directRound=false;

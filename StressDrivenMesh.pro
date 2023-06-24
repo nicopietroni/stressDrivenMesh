@@ -16,6 +16,7 @@ INCLUDEPATH += $$IGLLIB
 HEADERS       = ./app/glwidget.h \
                 ./app/triangle_mesh_type.h \
                 ./app/quad_refiner.h \
+                ./app/voronoi.h \
                 $$IGLLIB/igl/principal_curvature.h
 
 SOURCES       = ./app/glwidget.cpp \
